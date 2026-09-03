@@ -406,6 +406,7 @@ function renderAll() {
   renderStats();
   renderLeaderboard();
   renderPayoutsGrid();
+  renderTeamGrid();
   renderEvents();
   renderPlatformStats();
   filterClips();
@@ -451,21 +452,28 @@ function renderLeaderboard() {
     const isMe = state.currentRole === c.id;
     return `
       <tr class="hover:bg-slate-800/40 transition-colors ${isMe ? 'bg-brand-kick/10 border-l-2 border-brand-kick' : ''}">
-        <td class="p-3 font-bold text-sm ${idx === 0 ? 'text-amber-400' : 'text-slate-400'}">${medal}</td>
-        <td class="p-3">
-          <div class="font-bold text-white text-xs flex items-center gap-1.5">
-            ${c.name} ${isMe ? '<span class="text-[10px] bg-brand-kick text-black font-extrabold px-1.5 py-0.2 rounded">TÚ</span>' : ''}
+        <td class="p-3.5 text-center font-bold text-sm whitespace-nowrap ${idx === 0 ? 'text-amber-400' : 'text-slate-400'}">${medal}</td>
+        <td class="p-3.5 whitespace-nowrap">
+          <div class="font-bold text-white text-xs flex items-center justify-between gap-2">
+            <span>${c.name} ${isMe ? '<span class="text-[10px] bg-brand-kick text-black font-extrabold px-1.5 py-0.2 rounded ml-1">TÚ</span>' : ''}</span>
+            ${state.currentRole === 'admin' ? `
+              <button onclick="openEditClipperModal('${c.id}')" class="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-brand-kick" title="Modificar Perfil del Clipper">
+                <i data-lucide="edit" class="size-3"></i>
+              </button>
+            ` : ''}
           </div>
-          <div class="text-[11px] text-slate-500">${c.handle || ''}</div>
+          <div class="text-[11px] text-slate-500 font-mono">${c.handle || ''}</div>
         </td>
-        <td class="p-3 text-slate-300">${c.role || '-'}</td>
-        <td class="p-3 text-right font-semibold text-purple-400">${c.qualifiedClips} <span class="text-slate-500 text-[10px]">(${c.clipsCount} tot.)</span></td>
-        <td class="p-3 text-right font-black text-white">${formatNumber(c.totalViews)}</td>
-        <td class="p-3 text-right font-black text-emerald-400">$${c.totalEarned}</td>
-        <td class="p-3 text-right font-bold ${c.pendingPayout > 0 ? 'text-amber-400' : 'text-slate-500'}">$${c.pendingPayout}</td>
+        <td class="p-3.5 text-slate-300 whitespace-nowrap">${c.role || '-'}</td>
+        <td class="p-3.5 text-right font-semibold text-purple-400 whitespace-nowrap">${c.qualifiedClips} <span class="text-slate-500 text-[10px]">(${c.clipsCount} tot.)</span></td>
+        <td class="p-3.5 text-right font-black text-white whitespace-nowrap">${formatNumber(c.totalViews)}</td>
+        <td class="p-3.5 text-right font-black text-emerald-400 whitespace-nowrap">$${c.totalEarned}</td>
+        <td class="p-3.5 text-right font-bold whitespace-nowrap ${c.pendingPayout > 0 ? 'text-amber-400' : 'text-slate-500'}">$${c.pendingPayout}</td>
       </tr>
     `;
   }).join('');
+
+  lucide.createIcons();
 }
 
 function renderPlatformStats() {
@@ -530,68 +538,68 @@ function renderClipsTable(clips) {
     return `
       <tr class="hover:bg-slate-800/40 transition-colors group">
         <!-- Preview Icon Button -->
-        <td class="p-3.5">
-          <button onclick="openPreviewModal('${clip.id}')" class="size-9 rounded-xl bg-slate-900 border border-slate-700 hover:border-brand-kick hover:text-brand-kick text-slate-300 flex items-center justify-center transition-all shadow-sm" title="Previsualizar Video">
+        <td class="p-3.5 whitespace-nowrap text-center">
+          <button onclick="openPreviewModal('${clip.id}')" class="size-9 rounded-xl bg-slate-900 border border-slate-700 hover:border-brand-kick hover:text-brand-kick text-slate-300 inline-flex items-center justify-center transition-all shadow-sm active:scale-95" title="Previsualizar Video">
             <i data-lucide="play" class="size-4"></i>
           </button>
         </td>
 
         <!-- Clipper -->
-        <td class="p-3.5">
+        <td class="p-3.5 whitespace-nowrap">
           <div class="font-bold text-white text-xs">${clip.clipperName}</div>
           <span class="text-[10px] text-slate-400 font-mono">${clip.clipperId}</span>
         </td>
 
         <!-- Title & Category -->
-        <td class="p-3.5 max-w-xs">
-          <div class="font-bold text-slate-100 truncate cursor-pointer hover:text-brand-kick" onclick="openPreviewModal('${clip.id}')">${clip.title || 'Sin título'}</div>
-          <span class="inline-block mt-0.5 px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 border border-white/5">${clip.category || 'General'}</span>
+        <td class="p-3.5 min-w-[200px] max-w-sm">
+          <div class="font-bold text-slate-100 truncate cursor-pointer hover:text-brand-kick" onclick="openPreviewModal('${clip.id}')" title="${clip.title || ''}">${clip.title || 'Sin título'}</div>
+          <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] bg-slate-900 text-slate-400 border border-white/5 whitespace-nowrap">${clip.category || 'General'}</span>
         </td>
 
         <!-- Platform -->
-        <td class="p-3.5">
+        <td class="p-3.5 whitespace-nowrap">
           ${platformIcon}
         </td>
 
         <!-- Views -->
-        <td class="p-3.5 text-right font-black text-sm text-white">
+        <td class="p-3.5 text-right font-black text-sm text-white whitespace-nowrap">
           ${formatNumber(clip.views)}
         </td>
 
         <!-- Tier -->
-        <td class="p-3.5 text-center">
-          <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold ${tierBadgeClass}">
-            ${clip.tierLabel || 'En progreso'}
+        <td class="p-3.5 text-center whitespace-nowrap">
+          <span class="inline-flex items-center whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold ${tierBadgeClass}">
+            ${clip.tierLabel || 'En progreso (< 10K)'}
           </span>
         </td>
 
         <!-- Remuneration -->
-        <td class="p-3.5 text-right font-black text-sm text-emerald-400">
+        <td class="p-3.5 text-right font-black text-sm text-emerald-400 whitespace-nowrap">
           $${clip.payout || 0} USD
         </td>
 
         <!-- Dates -->
-        <td class="p-3.5 text-[11px] text-slate-400">
+        <td class="p-3.5 text-xs text-slate-400 whitespace-nowrap">
           <div>Pub: <span class="text-slate-300 font-mono">${clip.publishDate || '-'}</span></div>
-          <div>Corte: <span class="text-slate-300 font-mono">${clip.checkDate || '-'}</span></div>
+          <div class="mt-0.5">Corte: <span class="text-slate-300 font-mono">${clip.checkDate || '-'}</span></div>
         </td>
 
         <!-- Status -->
-        <td class="p-3.5 text-center">
+        <td class="p-3.5 text-center whitespace-nowrap">
           ${statusBadge}
         </td>
 
         <!-- Actions -->
-        <td class="p-3.5 text-right">
+        <td class="p-3.5 text-right whitespace-nowrap">
           <div class="flex items-center justify-end gap-1.5">
-            <button onclick="openEditClipModal('${clip.id}')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300" title="Editar Métricas">
+            <button onclick="openEditClipModal('${clip.id}')" class="p-2 rounded-lg bg-slate-900 border border-slate-700/80 hover:bg-slate-800 hover:border-slate-500 text-slate-300 hover:text-white transition-all shadow-sm" title="Editar Métricas">
               <i data-lucide="edit-3" class="size-3.5"></i>
             </button>
             ${isAdmin ? `
-              <button onclick="toggleClipPaidStatus('${clip.id}')" class="p-1.5 rounded-lg ${clip.status === 'paid' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400'}" title="${clip.status === 'paid' ? 'Marcar Pendiente' : 'Marcar Pagado'}">
+              <button onclick="toggleClipPaidStatus('${clip.id}')" class="p-2 rounded-lg ${clip.status === 'paid' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-900 border border-slate-700/80 hover:bg-emerald-500/20 hover:border-emerald-500/30 text-slate-400 hover:text-emerald-400'} transition-all shadow-sm" title="${clip.status === 'paid' ? 'Marcar Pendiente' : 'Marcar Pagado'}">
                 <i data-lucide="dollar-sign" class="size-3.5"></i>
               </button>
-              <button onclick="deleteClip('${clip.id}')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400" title="Eliminar">
+              <button onclick="deleteClip('${clip.id}')" class="p-2 rounded-lg bg-slate-900 border border-slate-700/80 hover:bg-red-500/20 hover:border-red-500/30 text-slate-400 hover:text-red-400 transition-all shadow-sm" title="Eliminar">
                 <i data-lucide="trash-2" class="size-3.5"></i>
               </button>
             ` : ''}
@@ -750,11 +758,11 @@ function getPlatformBadge(platform) {
 function getStatusBadge(status) {
   switch (status) {
     case 'paid':
-      return `<span class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">💸 Pagado</span>`;
+      return `<span class="inline-flex items-center whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">💸 Pagado</span>`;
     case 'approved':
-      return `<span class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20">✅ Aprobado</span>`;
+      return `<span class="inline-flex items-center whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20">✅ Aprobado</span>`;
     default:
-      return `<span class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">⏳ Pendiente</span>`;
+      return `<span class="inline-flex items-center whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">⏳ Pendiente</span>`;
   }
 }
 
@@ -1181,4 +1189,71 @@ async function handleSaveClipperProfile(e) {
   } catch (err) {
     alert('Error de conexión: ' + err.message);
   }
+}
+
+function renderTeamGrid() {
+  const container = document.getElementById('clippers-team-grid');
+  if (!container) return;
+
+  const currentOrigin = window.location.origin;
+
+  container.innerHTML = state.clippers.map((clipper, index) => {
+    const directLink = `${currentOrigin}/?c=${clipper.id.replace('c', '')}`;
+    const isActive = clipper.active !== false;
+
+    return `
+      <div class="glass-card rounded-2xl p-6 space-y-5 border border-white/5 relative overflow-hidden flex flex-col justify-between hover:border-slate-600 transition-all">
+        <!-- Header -->
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-mono font-bold uppercase tracking-wider text-brand-kick bg-brand-kick/10 px-2.5 py-0.5 rounded-md border border-brand-kick/20">${clipper.id.toUpperCase()}</span>
+              <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${isActive ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-800 text-slate-400'}">
+                ${isActive ? '● Activo' : 'Inactivo'}
+              </span>
+            </div>
+            <h3 class="font-bold text-lg text-white mt-2">${clipper.name}</h3>
+            <p class="text-xs font-mono text-cyan-400">${clipper.handle || '@sin_usuario'}</p>
+          </div>
+          <div class="size-12 rounded-2xl bg-slate-900 border border-slate-700/80 text-brand-kick flex items-center justify-center font-black text-base shadow-sm">
+            #${index + 1}
+          </div>
+        </div>
+
+        <!-- Format / Niche Box -->
+        <div class="p-3.5 rounded-xl bg-slate-900/90 border border-white/5 space-y-1">
+          <span class="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Formato Asignado:</span>
+          <p class="text-xs font-semibold text-slate-200">${clipper.role || 'Editor de Contenido General'}</p>
+        </div>
+
+        <!-- Direct Personal Link -->
+        <div class="space-y-1.5 text-xs">
+          <label class="text-slate-400 text-[11px] font-semibold flex items-center gap-1"><i data-lucide="link" class="size-3"></i> Enlace Directo del Clipper:</label>
+          <div class="flex items-center gap-1.5 bg-slate-950 p-2 rounded-xl border border-slate-800">
+            <input type="text" readonly value="${directLink}" class="bg-transparent text-[11px] font-mono text-slate-300 w-full focus:outline-none select-all" id="link-input-${clipper.id}">
+            <button onclick="copyClipperLink('${directLink}')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-brand-kick text-xs font-bold whitespace-nowrap active:scale-95" title="Copiar Enlace">
+              Copiar
+            </button>
+          </div>
+        </div>
+
+        <!-- Action Button -->
+        <div class="pt-2 border-t border-white/5">
+          <button onclick="openEditClipperModal('${clipper.id}')" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600/60 hover:border-brand-kick text-white font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95">
+            <i data-lucide="edit-3" class="size-4 text-brand-kick"></i> Modificar Nombre & Perfil
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  lucide.createIcons();
+}
+
+function copyClipperLink(url) {
+  navigator.clipboard.writeText(url).then(() => {
+    alert('📋 Enlace copiado al portapapeles:\n' + url);
+  }).catch(() => {
+    prompt('Copia este enlace:', url);
+  });
 }

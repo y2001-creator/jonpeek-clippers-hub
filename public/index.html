@@ -103,6 +103,9 @@
       <button onclick="switchTab('payouts')" id="tab-btn-payouts" class="tab-btn admin-only flex items-center gap-2 px-3.5 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent transition-all whitespace-nowrap">
         <i data-lucide="wallet" class="size-4"></i> Liquidaciones por Clipper
       </button>
+      <button onclick="switchTab('team')" id="tab-btn-team" class="tab-btn admin-only flex items-center gap-2 px-3.5 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent transition-all whitespace-nowrap">
+        <i data-lucide="users" class="size-4 text-brand-kick"></i> 👥 Perfiles de Clippers
+      </button>
       <button onclick="switchTab('planner')" id="tab-btn-planner" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent transition-all whitespace-nowrap">
         <i data-lucide="calendar" class="size-4"></i> Reparto de Streams / Partidos
       </button>
@@ -230,20 +233,20 @@
             </button>
           </div>
 
-          <div class="overflow-x-auto">
+          <div class="overflow-x-auto rounded-xl border border-white/5">
             <table class="w-full text-left text-xs">
-              <thead class="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold">
+              <thead class="bg-slate-900/80 text-slate-400 uppercase tracking-wider font-semibold whitespace-nowrap border-b border-white/5">
                 <tr>
-                  <th class="p-3 rounded-l-lg">Pos</th>
-                  <th class="p-3">Clipper</th>
-                  <th class="p-3">Especialidad</th>
-                  <th class="p-3 text-right">Clips ≥10K</th>
-                  <th class="p-3 text-right">Vistas Totales</th>
-                  <th class="p-3 text-right">Ganado</th>
-                  <th class="p-3 text-right rounded-r-lg">Pendiente</th>
+                  <th class="p-3.5 text-center">Pos</th>
+                  <th class="p-3.5">Clipper</th>
+                  <th class="p-3.5">Especialidad</th>
+                  <th class="p-3.5 text-right">Clips ≥10K</th>
+                  <th class="p-3.5 text-right">Vistas Totales</th>
+                  <th class="p-3.5 text-right">Ganado</th>
+                  <th class="p-3.5 text-right">Pendiente</th>
                 </tr>
               </thead>
-              <tbody id="leaderboard-tbody" class="divide-y divide-white/5">
+              <tbody id="leaderboard-tbody" class="divide-y divide-white/5 bg-slate-950/40">
                 <!-- Dynamic Content -->
               </tbody>
             </table>
@@ -329,23 +332,23 @@
           <span id="clips-count-badge" class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-300">0 clips encontrados</span>
         </div>
 
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto rounded-xl border border-white/5">
           <table class="w-full text-left text-xs">
-            <thead class="bg-slate-900/80 text-slate-400 uppercase tracking-wider font-semibold">
+            <thead class="bg-slate-900/90 text-slate-400 uppercase tracking-wider font-semibold whitespace-nowrap border-b border-white/5">
               <tr>
-                <th class="p-3.5 rounded-l-xl">Preview</th>
+                <th class="p-3.5 text-center">Preview</th>
                 <th class="p-3.5">Clipper</th>
-                <th class="p-3.5">Título & Categoría</th>
+                <th class="p-3.5 min-w-[200px]">Título & Categoría</th>
                 <th class="p-3.5">Plataforma</th>
                 <th class="p-3.5 text-right">Vistas</th>
                 <th class="p-3.5 text-center">Nivel / Tier</th>
                 <th class="p-3.5 text-right">Remuneración</th>
                 <th class="p-3.5">Fechas</th>
                 <th class="p-3.5 text-center">Estado</th>
-                <th class="p-3.5 text-right rounded-r-xl">Acciones</th>
+                <th class="p-3.5 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody id="clips-tbody" class="divide-y divide-white/5">
+            <tbody id="clips-tbody" class="divide-y divide-white/5 bg-slate-950/40">
               <!-- Dynamic Content -->
             </tbody>
           </table>
@@ -368,6 +371,23 @@
       <!-- Clipper Payout Cards Grid -->
       <div id="clippers-payout-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <!-- Dynamic Cards -->
+      </div>
+    </section>
+
+    <!-- TAB: TEAM & CLIPPER PROFILES (ADMIN ONLY) -->
+    <section id="tab-team" class="tab-content hidden space-y-6">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="font-black text-xl text-white flex items-center gap-2">
+            <i data-lucide="users" class="size-6 text-brand-kick"></i> Gestión del Equipo de Clippers
+          </h2>
+          <p class="text-xs text-slate-400">Modifica nombres reales, usuarios de TikTok/FB, nichos asignados y copia sus enlaces de acceso personal</p>
+        </div>
+      </div>
+
+      <!-- Clipper Profiles Grid -->
+      <div id="clippers-team-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Dynamic Cards rendered by renderTeamGrid() -->
       </div>
     </section>
 

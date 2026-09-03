@@ -35,6 +35,17 @@
 }
 
 /* Tier Badges & Glows */
+[class*="badge-tier-"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  line-height: 1.3;
+  padding: 0.35rem 0.75rem;
+  font-weight: 700;
+  border-radius: 0.5rem;
+}
+
 .badge-tier-0 {
   background: rgba(100, 116, 139, 0.2);
   color: #94a3b8;
