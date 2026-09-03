@@ -393,6 +393,9 @@ function switchTab(tabId) {
   if (tabId === 'payouts') {
     renderPayoutsGrid();
   }
+  if (tabId === 'team') {
+    renderTeamGrid();
+  }
   if (tabId === 'dashboard') {
     fetchStats();
   }
@@ -1191,13 +1194,25 @@ async function handleSaveClipperProfile(e) {
   }
 }
 
-function renderTeamGrid() {
+async function renderTeamGrid() {
   const container = document.getElementById('clippers-team-grid');
   if (!container) return;
 
+  if (!state.clippers || state.clippers.length === 0) {
+    await fetchClippers();
+  }
+
+  const clippersList = (state.clippers && state.clippers.length > 0) ? state.clippers : [
+    { id: 'c1', name: 'Clipper 1', handle: '@clipper1_jp', role: 'Picks Verdes y Cuotas en Vivo', active: true },
+    { id: 'c2', name: 'Clipper 2', handle: '@clipper2_jp', role: 'Estadísticas y Datos Anti-Humo', active: true },
+    { id: 'c3', name: 'Clipper 3', handle: '@clipper3_jp', role: 'Momentos Tensión / Polémicas', active: true },
+    { id: 'c4', name: 'Clipper 4', handle: '@clipper4_jp', role: 'Psicología & Gestión de Capital', active: true },
+    { id: 'c5', name: 'Clipper 5', handle: '@clipper5_jp', role: 'Multiplicadores y Just Chatting', active: true }
+  ];
+
   const currentOrigin = window.location.origin;
 
-  container.innerHTML = state.clippers.map((clipper, index) => {
+  container.innerHTML = clippersList.map((clipper, index) => {
     const directLink = `${currentOrigin}/?c=${clipper.id.replace('c', '')}`;
     const isActive = clipper.active !== false;
 
@@ -1239,8 +1254,8 @@ function renderTeamGrid() {
 
         <!-- Action Button -->
         <div class="pt-2 border-t border-white/5">
-          <button onclick="openEditClipperModal('${clipper.id}')" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600/60 hover:border-brand-kick text-white font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95">
-            <i data-lucide="edit-3" class="size-4 text-brand-kick"></i> Modificar Nombre & Perfil
+          <button onclick="openEditClipperModal('${clipper.id}')" class="w-full py-2.5 px-4 rounded-xl bg-brand-kick/10 hover:bg-brand-kick hover:text-black text-brand-kick border border-brand-kick/30 font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95">
+            <i data-lucide="edit-3" class="size-4"></i> Modificar Nombre & Perfil
           </button>
         </div>
       </div>
