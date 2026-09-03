@@ -619,9 +619,18 @@ function renderPayoutsGrid() {
   const container = document.getElementById('clippers-payout-grid');
   if (!container) return;
 
+  const isAdmin = state.currentRole === 'admin';
   const stats = state.stats.leaderboard || [];
 
-  container.innerHTML = state.clippers.map(clipper => {
+  const clippersList = (state.clippers && state.clippers.length > 0) ? state.clippers : [
+    { id: 'c1', name: 'Clipper 1', handle: '@clipper1_jp', role: 'Picks Verdes y Cuotas en Vivo', active: true },
+    { id: 'c2', name: 'Clipper 2', handle: '@clipper2_jp', role: 'Estadísticas y Datos Anti-Humo', active: true },
+    { id: 'c3', name: 'Clipper 3', handle: '@clipper3_jp', role: 'Momentos Tensión / Polémicas', active: true },
+    { id: 'c4', name: 'Clipper 4', handle: '@clipper4_jp', role: 'Psicología & Gestión de Capital', active: true },
+    { id: 'c5', name: 'Clipper 5', handle: '@clipper5_jp', role: 'Multiplicadores y Just Chatting', active: true }
+  ];
+
+  container.innerHTML = clippersList.map(clipper => {
     const cStat = stats.find(s => s.id === clipper.id) || {
       clipsCount: 0,
       qualifiedClips: 0,
@@ -1265,9 +1274,12 @@ async function renderTeamGrid() {
         </div>
 
         <!-- Action Button -->
-        <div class="pt-2 border-t border-white/5">
-          <button onclick="openEditClipperModal('${clipper.id}')" class="w-full py-2.5 px-4 rounded-xl bg-brand-kick/10 hover:bg-brand-kick hover:text-black text-brand-kick border border-brand-kick/30 font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95">
-            <i data-lucide="edit-3" class="size-4"></i> Modificar Nombre & Perfil
+        <div class="pt-2 border-t border-white/5 flex items-center gap-2">
+          <button onclick="openEditClipperModal('${clipper.id}')" class="flex-1 py-2.5 px-3 rounded-xl bg-brand-kick/10 hover:bg-brand-kick hover:text-black text-brand-kick border border-brand-kick/30 font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95">
+            <i data-lucide="edit-3" class="size-4"></i> Modificar Perfil
+          </button>
+          <button onclick="deleteClipper('${clipper.id}', '${clipper.name}')" class="p-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-bold text-xs transition-all flex items-center justify-center shadow-sm active:scale-95" title="Eliminar Clipper del Equipo">
+            <i data-lucide="trash-2" class="size-4"></i>
           </button>
         </div>
       </div>
@@ -1275,6 +1287,37 @@ async function renderTeamGrid() {
   }).join('');
 
   lucide.createIcons();
+}
+
+async function deleteClipper(id, name) {
+  if (!confirm(`⚠️ ¿Estás seguro de que deseas eliminar a "${name}" (${id.toUpperCase()}) del equipo?`)) {
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/clippers/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      await Promise.all([fetchClippers(), fetchClips(), fetchStats()]);
+      populateClipperDropdowns();
+      if (state.currentRole === id) {
+        state.currentRole = 'admin';
+      }
+      applyRoleView(state.currentRole);
+      renderAll();
+      alert(`🗑️ Clipper "${name}" eliminado con éxito.`);
+    } else {
+      alert('Error al eliminar el clipper.');
+    }
+  } catch (err) {
+    alert('Error de conexión: ' + err.message);
+  }
+}
+
+async function handleDeleteClipperFromModal() {
+  const id = document.getElementById('edit-clipper-id').value;
+  const name = document.getElementById('edit-clipper-name').value;
+  closeEditClipperModal();
+  await deleteClipper(id, name);
 }
 
 function copyClipperLink(url) {

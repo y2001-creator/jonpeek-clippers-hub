@@ -837,11 +837,16 @@
           <input type="checkbox" id="edit-clipper-active" class="rounded border-slate-700 bg-slate-900 text-brand-kick focus:ring-brand-kick">
           <label for="edit-clipper-active" class="text-slate-300 font-semibold cursor-pointer">Clipper Activo en el Equipo</label>
         </div>
-        <div class="pt-3 border-t border-white/5 flex items-center justify-end gap-2">
-          <button type="button" onclick="closeEditClipperModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold">Cancelar</button>
-          <button type="submit" class="px-4 py-2 rounded-xl bg-brand-kick text-black font-bold flex items-center gap-1.5">
-            <i data-lucide="check" class="size-4"></i> Guardar Cambios
+        <div class="pt-3 border-t border-white/5 flex items-center justify-between gap-2">
+          <button type="button" onclick="handleDeleteClipperFromModal()" class="px-3.5 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-bold flex items-center gap-1.5">
+            <i data-lucide="trash-2" class="size-3.5"></i> Eliminar
           </button>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="closeEditClipperModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold">Cancelar</button>
+            <button type="submit" class="px-4 py-2 rounded-xl bg-brand-kick text-black font-bold flex items-center gap-1.5">
+              <i data-lucide="check" class="size-4"></i> Guardar Cambios
+            </button>
+          </div>
         </div>
       </form>
     </div>
