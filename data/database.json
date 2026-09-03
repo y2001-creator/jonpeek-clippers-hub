@@ -3,7 +3,7 @@
     "streamerName": "Jonpeek",
     "kickUrl": "https://kick.com/JONPEEK",
     "youtubeUrl": "https://www.youtube.com/@Jonpeekcs",
-    "adminPin": "1234",
+    "adminPin": "2001",
     "currency": "USD",
     "currencySymbol": "$",
     "payoutTiers": [
@@ -47,7 +47,7 @@
   "clippers": [
     {
       "id": "c1",
-      "name": "Clipper 1",
+      "name": "Clipper 1 (Picks Verdes)",
       "handle": "@clipper1_jp",
       "role": "Picks Verdes y Cuotas en Vivo",
       "active": true
@@ -139,7 +139,7 @@
     {
       "id": "clip-1788401301784-muoc",
       "clipperId": "c1",
-      "clipperName": "Clipper 1",
+      "clipperName": "Clipper 1 (Picks Verdes)",
       "url": "https://www.tiktok.com/@manuel_navarrolpz/video/7679158315800153365",
       "platform": "tiktok",
       "title": "Ni como negarme al soñador de Premier League, Bundesliga y La Liga ",

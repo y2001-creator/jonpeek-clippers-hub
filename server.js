@@ -299,7 +299,7 @@ app.post('/api/fetch-metadata', async (req, res) => {
 app.post('/api/auth/admin', (req, res) => {
   const { pin } = req.body;
   const db = readDB();
-  const validPin = db.settings.adminPin || "1234";
+  const validPin = db.settings.adminPin || "2001";
 
   if (pin === validPin) {
     res.json({ success: true, message: "PIN correcto. Acceso como Admin concedido." });
