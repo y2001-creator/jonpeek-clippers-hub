@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: jonpeek-clippers-hub
+    runtime: node
+    plan: free
+    buildCommand: npm install && pip install yt-dlp
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
+    disk:
+      name: clippers-data
+      mountPath: /data
+      sizeGB: 1

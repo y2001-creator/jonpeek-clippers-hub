@@ -1,0 +1,160 @@
+{
+  "settings": {
+    "streamerName": "Jonpeek",
+    "kickUrl": "https://kick.com/JONPEEK",
+    "youtubeUrl": "https://www.youtube.com/@Jonpeekcs",
+    "adminPin": "1234",
+    "currency": "USD",
+    "currencySymbol": "$",
+    "payoutTiers": [
+      {
+        "minViews": 10000,
+        "maxViews": 49999,
+        "payout": 5,
+        "label": "🥉 Nivel 1 (10K+ Views)",
+        "badge": "tier-1"
+      },
+      {
+        "minViews": 50000,
+        "maxViews": 99999,
+        "payout": 25,
+        "label": "🥈 Nivel 2 (50K+ Views)",
+        "badge": "tier-2"
+      },
+      {
+        "minViews": 100000,
+        "maxViews": 499999,
+        "payout": 40,
+        "label": "🥇 Nivel 3 (100K+ Views)",
+        "badge": "tier-3"
+      },
+      {
+        "minViews": 500000,
+        "maxViews": 999999,
+        "payout": 120,
+        "label": "💎 Nivel Master (500K+ Views)",
+        "badge": "tier-4"
+      },
+      {
+        "minViews": 1000000,
+        "maxViews": null,
+        "payout": 250,
+        "label": "👑 Nivel Viral Legend (1M+ Views)",
+        "badge": "tier-5"
+      }
+    ]
+  },
+  "clippers": [
+    {
+      "id": "c1",
+      "name": "Clipper 1",
+      "handle": "@clipper1_jp",
+      "role": "Picks Verdes y Cuotas en Vivo",
+      "active": true
+    },
+    {
+      "id": "c2",
+      "name": "Clipper 2",
+      "handle": "@clipper2_jp",
+      "role": "Estadísticas y Datos Anti-Humo",
+      "active": true
+    },
+    {
+      "id": "c3",
+      "name": "Clipper 3",
+      "handle": "@clipper3_jp",
+      "role": "Momentos Tensión / Polémicas",
+      "active": true
+    },
+    {
+      "id": "c4",
+      "name": "Clipper 4",
+      "handle": "@clipper4_jp",
+      "role": "Psicología & Gestión de Capital",
+      "active": true
+    },
+    {
+      "id": "c5",
+      "name": "Clipper 5",
+      "handle": "@clipper5_jp",
+      "role": "Multiplicadores y Just Chatting",
+      "active": true
+    }
+  ],
+  "clips": [
+    {
+      "id": "clip-1788401905946-keev",
+      "clipperId": "c3",
+      "clipperName": "Clipper 3",
+      "url": "https://www.tiktok.com/@manuel_navarrolpz/video/7680684439457762581?is_from_webapp=1&sender_device=pc",
+      "platform": "tiktok",
+      "title": "Yo cuando critican mis ratoneros ",
+      "category": "Pick Verde",
+      "views": 11273,
+      "publishDate": "2026-09-01",
+      "checkDate": "2026-09-03",
+      "status": "pending",
+      "payout": 5,
+      "tierLabel": "🥉 Nivel 1 (10K+ Views)",
+      "badge": "tier-1",
+      "notes": "",
+      "createdAt": "2026-09-03T02:18:25.946Z"
+    },
+    {
+      "id": "clip-1788401854504-ldgk",
+      "clipperId": "c2",
+      "clipperName": "Clipper 2",
+      "url": "https://www.tiktok.com/@manuel_navarrolpz/video/7680684439457762581?is_from_webapp=1&sender_device=pc",
+      "platform": "tiktok",
+      "title": "Yo cuando critican mis ratoneros ",
+      "category": "Pick Verde",
+      "views": 11273,
+      "publishDate": "2026-09-01",
+      "checkDate": "2026-09-03",
+      "status": "pending",
+      "payout": 5,
+      "tierLabel": "🥉 Nivel 1 (10K+ Views)",
+      "badge": "tier-1",
+      "notes": "",
+      "createdAt": "2026-09-03T02:17:34.504Z"
+    },
+    {
+      "id": "clip-1788401788451-dxfw",
+      "clipperId": "c2",
+      "clipperName": "Clipper 2",
+      "url": "https://www.tiktok.com/@manuel_navarrolpz/video/7679158315800153365?is_from_webapp=1&sender_device=pc",
+      "platform": "tiktok",
+      "title": "Ni como negarme al soñador de Premier League, Bundesliga y La Liga ",
+      "category": "Pick Verde",
+      "views": 0,
+      "publishDate": "2026-08-28",
+      "checkDate": "2026-09-03",
+      "status": "pending",
+      "payout": 0,
+      "tierLabel": "En progreso (< 10K views)",
+      "badge": "tier-0",
+      "notes": "",
+      "createdAt": "2026-09-03T02:16:28.457Z"
+    },
+    {
+      "id": "clip-1788401301784-muoc",
+      "clipperId": "c1",
+      "clipperName": "Clipper 1",
+      "url": "https://www.tiktok.com/@manuel_navarrolpz/video/7679158315800153365",
+      "platform": "tiktok",
+      "title": "Ni como negarme al soñador de Premier League, Bundesliga y La Liga ",
+      "category": "Pick Verde",
+      "views": 10381,
+      "publishDate": "2026-08-28",
+      "checkDate": "2026-09-03",
+      "status": "pending",
+      "payout": 5,
+      "tierLabel": "🥉 Nivel 1 (10K+ Views)",
+      "badge": "tier-1",
+      "notes": "",
+      "createdAt": "2026-09-03T02:08:21.784Z",
+      "updatedAt": "2026-09-03T02:16:08.136Z"
+    }
+  ],
+  "events": []
+}

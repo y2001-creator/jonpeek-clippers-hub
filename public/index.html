@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jonpeek | Clippers Hub & Payout Tracker</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              dark: '#090d16',
+              card: '#0f172a',
+              border: '#1e293b',
+              kick: '#53fc18',
+              kickHover: '#45d413',
+              accent: '#38bdf8'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-brand-dark text-slate-100 min-h-screen flex flex-col antialiased selection:bg-brand-kick selection:text-black">
+
+  <!-- Top Navbar -->
+  <header class="glass-nav sticky top-0 z-40 px-4 lg:px-8 py-3">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <!-- Logo & Channel Brand -->
+      <div class="flex items-center gap-3 w-full sm:w-auto justify-between">
+        <div class="flex items-center gap-3">
+          <div class="relative flex items-center justify-center size-10 rounded-xl bg-gradient-to-tr from-brand-kick to-emerald-400 text-black font-black text-xl shadow-lg shadow-emerald-500/20">
+            JP
+            <span class="absolute -top-1 -right-1 size-3 bg-brand-kick rounded-full animate-ping"></span>
+            <span class="absolute -top-1 -right-1 size-3 bg-brand-kick rounded-full"></span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="font-black text-lg tracking-tight text-white">JONPEEK <span class="text-brand-kick font-normal text-xs uppercase px-2 py-0.5 rounded-full bg-brand-kick/10 border border-brand-kick/30 ml-1 font-mono">Clippers Hub</span></h1>
+            </div>
+            <p class="text-xs text-slate-400">Plataforma de Control de Vistas & Liquidaciones</p>
+          </div>
+        </div>
+
+        <!-- Mobile Role Indicator -->
+        <span id="mobile-role-badge" class="sm:hidden text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-800 text-brand-kick border border-brand-kick/30">Admin</span>
+      </div>
+
+      <!-- User Role Selector, Month Period & Fast Actions -->
+      <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end flex-wrap">
+        <!-- Month Filter Selector -->
+        <div class="flex items-center gap-1.5 bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-1.5 shadow-sm">
+          <i data-lucide="calendar" class="size-4 text-emerald-400"></i>
+          <select id="month-filter-select" onchange="handleMonthChange(this.value)" class="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer">
+            <option value="2026-09">📅 Septiembre 2026 (Actual)</option>
+            <option value="all">📅 Todos los Meses (Histórico)</option>
+          </select>
+        </div>
+
+        <!-- Role Dropdown Selector -->
+        <div class="flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-1.5 shadow-sm">
+          <i data-lucide="user-check" class="size-4 text-brand-kick"></i>
+          <select id="user-role-select" onchange="handleRoleChange(this.value)" class="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer">
+            <option value="admin" class="bg-slate-900 text-amber-400">👑 Jon & Manager (Admin)</option>
+            <option value="c1" class="bg-slate-900 text-white">🎬 Clipper 1 (Picks Verdes)</option>
+            <option value="c2" class="bg-slate-900 text-white">🎬 Clipper 2 (Análisis Táctico)</option>
+            <option value="c3" class="bg-slate-900 text-white">🎬 Clipper 3 (VAR / Rages)</option>
+            <option value="c4" class="bg-slate-900 text-white">🎬 Clipper 4 (Bankroll / Tips)</option>
+            <option value="c5" class="bg-slate-900 text-white">🎬 Clipper 5 (Casino / Just Chatting)</option>
+          </select>
+        </div>
+
+        <button onclick="openNewClipModal()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-brand-kick to-emerald-400 hover:from-brand-kickHover hover:to-emerald-500 text-black font-bold text-xs shadow-lg shadow-brand-kick/20 transition-all active:scale-95">
+          <i data-lucide="plus-circle" class="size-4"></i> Subir Clip
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="border-b border-white/5 bg-slate-950/40 px-4 lg:px-8">
+    <div class="max-w-7xl mx-auto flex items-center gap-2 overflow-x-auto py-2.5 no-scrollbar text-sm font-medium">
+      <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="tab-btn active flex items-center gap-2 px-3.5 py-2 rounded-lg text-brand-kick bg-brand-kick/10 border border-brand-kick/30 transition-all whitespace-nowrap">
+        <i data-lucide="layout-dashboard" class="size-4"></i> <span id="tab-label-dashboard">Dashboard & Ranking</span>
+      </button>
+      <button onclick="switchTab('clips')" id="tab-btn-clips" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent transition-all whitespace-nowrap">
+        <i data-lucide="film" class="size-4"></i> <span id="tab-label-clips">Registro de Clips & Vistas</span>
+      </button>
+      <button onclick="switchTab('payouts')" id="tab-btn-payouts" class="tab-btn admin-only flex items-center gap-2 px-3.5 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent transition-all whitespace-nowrap">
+        <i data-lucide="wallet" class="size-4"></i> Liquidaciones por Clipper
+      </button>
+      <button onclick="switchTab('planner')" id="tab-btn-planner" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent transition-all whitespace-nowrap">
+        <i data-lucide="calendar" class="size-4"></i> Reparto de Streams / Partidos
+      </button>
+      <button onclick="switchTab('guide')" id="tab-btn-guide" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent transition-all whitespace-nowrap">
+        <i data-lucide="shield-alert" class="size-4"></i> Guía Anti-Shadowban & Hooks
+      </button>
+      <button onclick="switchTab('settings')" id="tab-btn-settings" class="tab-btn admin-only flex items-center gap-2 px-3.5 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent transition-all whitespace-nowrap">
+        <i data-lucide="sliders" class="size-4"></i> Tiers de Pago ($/Views)
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8 space-y-6">
+
+    <!-- HERO / CLIPPER INSTANT SUBMIT BOX -->
+    <div id="clipper-quick-box" class="glass-card rounded-2xl p-6 border border-brand-kick/30 bg-gradient-to-r from-brand-kick/10 via-slate-900/60 to-emerald-500/5 space-y-4">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-2">
+        <div>
+          <span id="welcome-role-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold font-mono uppercase tracking-wider bg-brand-kick/20 text-brand-kick border border-brand-kick/40">Panel Administrador</span>
+          <h2 id="welcome-role-title" class="font-black text-xl text-white mt-1">Caja Rápida de Auto-Detección de Videos</h2>
+          <p class="text-xs text-slate-300">Pega cualquier enlace (YouTube Shorts, TikTok, Instagram Reels, X) y el sistema extraerá automáticamente el título, las vistas y calculará el dinero generado.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold text-slate-400">Esquema:</span>
+          <span class="px-2.5 py-1 rounded-lg text-xs font-bold badge-tier-1">10k = $5</span>
+          <span class="px-2.5 py-1 rounded-lg text-xs font-bold badge-tier-2">50k = $25</span>
+          <span class="px-2.5 py-1 rounded-lg text-xs font-bold badge-tier-3">100k = $40</span>
+        </div>
+      </div>
+
+      <!-- Quick Paste Input Bar -->
+      <div class="flex flex-col sm:flex-row items-center gap-2">
+        <div class="relative flex-1 w-full">
+          <i data-lucide="link" class="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400"></i>
+          <input type="url" id="quick-url-input" onpaste="handleQuickUrlPaste(event)" placeholder="Pega aquí el enlace de TikTok o Facebook Reels..." class="w-full pl-10 pr-12 py-3 bg-slate-950/90 border border-slate-700 rounded-xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-kick shadow-inner font-mono">
+          <div id="quick-fetch-spinner" class="hidden absolute right-3.5 top-1/2 -translate-y-1/2">
+            <i data-lucide="loader-2" class="size-4 text-brand-kick animate-spin"></i>
+          </div>
+        </div>
+        <button onclick="processQuickUrl()" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-brand-kick text-black font-bold text-xs hover:bg-brand-kickHover transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-kick/20 active:scale-95 whitespace-nowrap">
+          <i data-lucide="sparkles" class="size-4"></i> Auto-Detectar & Subir
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB 1: DASHBOARD -->
+    <section id="tab-dashboard" class="tab-content space-y-6">
+      <!-- KPI Stats Bar -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Total Views -->
+        <div class="glass-card rounded-2xl p-5 relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider" id="kpi-views-title">Vistas Totales</span>
+            <div class="p-2.5 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20">
+              <i data-lucide="eye" class="size-5"></i>
+            </div>
+          </div>
+          <div class="mt-4 flex items-baseline gap-2">
+            <span id="stat-total-views" class="text-3xl font-black text-white tracking-tight">0</span>
+            <span class="text-xs text-emerald-400 font-medium flex items-center"><i data-lucide="trending-up" class="size-3.5 mr-0.5"></i> +views</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-1" id="kpi-views-desc">Visualizaciones verificadas</p>
+        </div>
+
+        <!-- Total Earned -->
+        <div class="glass-card rounded-2xl p-5 relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider" id="kpi-earned-title">Generado por el Equipo</span>
+            <div class="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <i data-lucide="dollar-sign" class="size-5"></i>
+            </div>
+          </div>
+          <div class="mt-4 flex items-baseline gap-2">
+            <span id="stat-total-earned" class="text-3xl font-black text-white tracking-tight">$0</span>
+            <span class="text-xs text-slate-400 font-normal">por vistas</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">Total ganado por clips calificados</p>
+        </div>
+
+        <!-- Pending Payout -->
+        <div class="glass-card rounded-2xl p-5 relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider" id="kpi-pending-title">Pendiente de Pago</span>
+            <div class="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <i data-lucide="clock" class="size-5"></i>
+            </div>
+          </div>
+          <div class="mt-4 flex items-baseline gap-2">
+            <span id="stat-pending-payout" class="text-3xl font-black text-amber-400 tracking-tight">$0</span>
+            <span class="text-xs text-amber-400/80 font-medium">por liquidar</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">Saldo a transferir</p>
+        </div>
+
+        <!-- Qualified Viral Clips -->
+        <div class="glass-card rounded-2xl p-5 relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Clips Calificados (≥10K)</span>
+            <div class="p-2.5 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+              <i data-lucide="flame" class="size-5"></i>
+            </div>
+          </div>
+          <div class="mt-4 flex items-baseline gap-2">
+            <span id="stat-qualified-clips" class="text-3xl font-black text-purple-300 tracking-tight">0</span>
+            <span class="text-xs text-slate-400">/ <span id="stat-total-clips">0</span> totales</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">Videos con pago alcanzado</p>
+        </div>
+      </div>
+
+      <!-- Leaderboard & Analytics Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Leaderboard Table (2 Cols) -->
+        <div class="lg:col-span-2 glass-card rounded-2xl p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="font-bold text-base text-white flex items-center gap-2">
+                <i data-lucide="trophy" class="size-5 text-amber-400"></i> Ranking de los 5 Clippers
+              </h2>
+              <p class="text-xs text-slate-400">Rendimiento por vistas totales y comisiones acumuladas</p>
+            </div>
+            <button onclick="switchTab('payouts')" class="admin-only text-xs text-brand-kick hover:underline flex items-center gap-1 font-semibold">
+              Ver balances <i data-lucide="arrow-right" class="size-3.5"></i>
+            </button>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold">
+                <tr>
+                  <th class="p-3 rounded-l-lg">Pos</th>
+                  <th class="p-3">Clipper</th>
+                  <th class="p-3">Especialidad</th>
+                  <th class="p-3 text-right">Clips ≥10K</th>
+                  <th class="p-3 text-right">Vistas Totales</th>
+                  <th class="p-3 text-right">Ganado</th>
+                  <th class="p-3 text-right rounded-r-lg">Pendiente</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-tbody" class="divide-y divide-white/5">
+                <!-- Dynamic Content -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Quick Platform Stats & Action Card -->
+        <div class="glass-card rounded-2xl p-6 space-y-5 flex flex-col justify-between">
+          <div>
+            <h2 class="font-bold text-base text-white flex items-center gap-2">
+              <i data-lucide="pie-chart" class="size-5 text-sky-400"></i> Distribución de Redes
+            </h2>
+            <p class="text-xs text-slate-400 mt-1">Plataformas con mayor tracción de views</p>
+            
+            <div class="mt-4 space-y-3" id="platform-stats-container">
+              <!-- Dynamic Platform Progress Bars -->
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-white/5 space-y-2">
+            <button onclick="openNewClipModal()" class="w-full py-2.5 px-4 rounded-xl bg-brand-kick text-black font-bold text-sm hover:bg-brand-kickHover transition-all flex items-center justify-center gap-2">
+              <i data-lucide="upload" class="size-4"></i> Subir Nuevo Enlace
+            </button>
+            <button onclick="exportCSV()" class="admin-only w-full py-2 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs transition-all flex items-center justify-center gap-2">
+              <i data-lucide="download" class="size-3.5"></i> Exportar Reporte a Excel / CSV
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: CLIPS & VIEWS MANAGEMENT -->
+    <section id="tab-clips" class="tab-content hidden space-y-6">
+      <!-- Toolbar & Filters -->
+      <div class="glass-card rounded-2xl p-5 space-y-4">
+        <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+          <!-- Search Input -->
+          <div class="relative flex-1">
+            <i data-lucide="search" class="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400"></i>
+            <input type="text" id="clips-search" oninput="filterClips()" placeholder="Buscar por título, clipper, categoría o URL..." class="w-full pl-10 pr-4 py-2 bg-slate-900/80 border border-slate-700/60 rounded-xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-kick">
+          </div>
+
+          <!-- Filters -->
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Clipper Filter -->
+            <select id="filter-clipper" onchange="filterClips()" class="px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-brand-kick">
+              <option value="">Todos los Clippers</option>
+            </select>
+
+            <!-- Platform Filter -->
+            <select id="filter-platform" onchange="filterClips()" class="px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-brand-kick">
+              <option value="">Todas las Redes</option>
+              <option value="youtube">YouTube Shorts</option>
+              <option value="tiktok">TikTok</option>
+              <option value="instagram">Instagram Reels</option>
+              <option value="twitter">X / Twitter</option>
+            </select>
+
+            <!-- Status Filter -->
+            <select id="filter-status" onchange="filterClips()" class="px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-brand-kick">
+              <option value="">Todos los Estados</option>
+              <option value="pending">Pendiente de Pago</option>
+              <option value="approved">Aprobado</option>
+              <option value="paid">Pagado / Liquidado</option>
+            </select>
+
+            <button onclick="openNewClipModal()" class="px-4 py-2 rounded-xl bg-brand-kick text-black font-bold text-xs hover:bg-brand-kickHover transition-all flex items-center gap-1.5">
+              <i data-lucide="plus" class="size-4"></i> Nuevo Clip
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Clips Table -->
+      <div class="glass-card rounded-2xl p-6 overflow-hidden space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="font-bold text-base text-white flex items-center gap-2">
+              <i data-lucide="clapperboard" class="size-5 text-brand-kick"></i> Registro Hiper-Detallado de Clips
+            </h2>
+            <p class="text-xs text-slate-400">Haz clic en cualquier video para abrir la previsualización interactiva</p>
+          </div>
+          <span id="clips-count-badge" class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-300">0 clips encontrados</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-900/80 text-slate-400 uppercase tracking-wider font-semibold">
+              <tr>
+                <th class="p-3.5 rounded-l-xl">Preview</th>
+                <th class="p-3.5">Clipper</th>
+                <th class="p-3.5">Título & Categoría</th>
+                <th class="p-3.5">Plataforma</th>
+                <th class="p-3.5 text-right">Vistas</th>
+                <th class="p-3.5 text-center">Nivel / Tier</th>
+                <th class="p-3.5 text-right">Remuneración</th>
+                <th class="p-3.5">Fechas</th>
+                <th class="p-3.5 text-center">Estado</th>
+                <th class="p-3.5 text-right rounded-r-xl">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="clips-tbody" class="divide-y divide-white/5">
+              <!-- Dynamic Content -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: PAYOUTS & BALANCES (ADMIN ONLY) -->
+    <section id="tab-payouts" class="tab-content hidden space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="font-black text-xl text-white">Liquidaciones & Balances de Clippers</h2>
+          <p class="text-xs text-slate-400">Control de pagos individualizado por clipper con base en las visualizaciones validadas</p>
+        </div>
+        <button onclick="exportCSV()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold flex items-center gap-2">
+          <i data-lucide="file-spreadsheet" class="size-4 text-emerald-400"></i> Descargar Reporte Completo
+        </button>
+      </div>
+
+      <!-- Clipper Payout Cards Grid -->
+      <div id="clippers-payout-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Dynamic Cards -->
+      </div>
+    </section>
+
+    <!-- TAB 4: STREAM & MATCH PLANNER -->
+    <section id="tab-planner" class="tab-content hidden space-y-6">
+      <div class="glass-card rounded-2xl p-6 space-y-6">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <h2 class="font-black text-xl text-white flex items-center gap-2">
+              <i data-lucide="calendar-check" class="size-6 text-brand-kick"></i> Reparto de Directos & Jornadas Deportivas
+            </h2>
+            <p class="text-xs text-slate-400">Asigna eventos deportivos y directos de Jonpeek a cada clipper para evitar duplicidad de clips</p>
+          </div>
+          <button onclick="openNewEventModal()" class="admin-only px-4 py-2 rounded-xl bg-brand-kick text-black font-bold text-xs flex items-center gap-2 hover:bg-brand-kickHover transition-all">
+            <i data-lucide="plus" class="size-4"></i> Asignar Nuevo Evento
+          </button>
+        </div>
+
+        <div id="events-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Dynamic Events -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: GUIDE & ANTI-SHADOWBAN -->
+    <section id="tab-guide" class="tab-content hidden space-y-6">
+      <div class="glass-card rounded-2xl p-8 space-y-8 max-w-4xl mx-auto">
+        <div>
+          <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-brand-kick/10 text-brand-kick border border-brand-kick/30 font-mono">Manual Oficial del Equipo</span>
+          <h2 class="font-black text-2xl text-white mt-2">Guía de Estilo, Hooks y Reglas Anti-Shadowban para Clippers de Jonpeek</h2>
+          <p class="text-sm text-slate-400 mt-1">Pautas obligatorias para los 5 clippers para evitar bloqueos en TikTok/Shorts y maximizar retención.</p>
+        </div>
+
+        <!-- Warning Callout -->
+        <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs space-y-1">
+          <p class="font-bold flex items-center gap-1.5"><i data-lucide="alert-triangle" class="size-4 text-amber-400"></i> ¡Atención con las políticas de Apuestas / Gambling!</p>
+          <p class="text-slate-300">TikTok e Instagram banean o dan shadowban a cuentas que promuevan "apuestas de dinero fácil" o "juego". Siempre enfocar los clips hacia <strong>análisis táctico, estadísticas deportivas, aciertos de pronósticos y mentalidad</strong>.</p>
+        </div>
+
+        <!-- Safe Glossary -->
+        <div class="space-y-3">
+          <h3 class="font-bold text-base text-white flex items-center gap-2">
+            <i data-lucide="spell-check" class="size-5 text-brand-kick"></i> Glosario Seguro (Palabras Prohibidas vs Seguras)
+          </h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div class="p-4 rounded-xl bg-red-500/5 border border-red-500/20 space-y-2">
+              <span class="font-bold text-red-400 flex items-center gap-1"><i data-lucide="x-circle" class="size-4"></i> PALABRAS DE RIESGO (Evitar o Censurar)</span>
+              <ul class="space-y-1 text-slate-300">
+                <li>❌ Apuesta / Apostar todo</li>
+                <li>❌ Dinero fácil / Hazte rico</li>
+                <li>❌ Casino / Gambling / Tragaperras</li>
+                <li>❌ Casa de apuestas (nombrarlas explícitamente)</li>
+              </ul>
+            </div>
+            <div class="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 space-y-2">
+              <span class="font-bold text-emerald-400 flex items-center gap-1"><i data-lucide="check-circle" class="size-4"></i> PALABRAS SEGURAS (Usar libremente)</span>
+              <ul class="space-y-1 text-slate-300">
+                <li>✅ Pronóstico / Predicción estadística</li>
+                <li>✅ Lectura de partido / Análisis táctico</li>
+                <li>✅ Pick Verde / Acierto / Cuota</li>
+                <li>✅ Datos, probabilidades, gestión de capital</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5 Proven Formats -->
+        <div class="space-y-4">
+          <h3 class="font-bold text-base text-white flex items-center gap-2">
+            <i data-lucide="sparkles" class="size-5 text-purple-400"></i> Los 5 Formatos Ganadores para Jonpeek
+          </h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800">
+              <h4 class="font-bold text-white text-sm">1. El Pick Verde en Directo 🟢</h4>
+              <p class="text-slate-400 mt-1">Momento tenso del partido al minuto 85-90 donde Jonpeek acierta una cuota alta y lo celebra con el chat.</p>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800">
+              <h4 class="font-bold text-white text-sm">2. Píldoras Anti-Humo 🧠</h4>
+              <p class="text-slate-400 mt-1">Jonpeek desmontando mitos del fútbol o explicando por qué ciertas cuotas tienen trampa según la estadística.</p>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800">
+              <h4 class="font-bold text-white text-sm">3. Polémica VAR y Rages 🚨</h4>
+              <p class="text-slate-400 mt-1">Reacciones eufóricas, quejas por decisiones arbitrales o debates calientes con la comunidad.</p>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800">
+              <h4 class="font-bold text-white text-sm">4. Psicología & Bankroll 📈</h4>
+              <p class="text-slate-400 mt-1">Consejos de disciplina: cómo gestionar pérdidas, control emocional y vivir de esto a largo plazo.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- CTA Guidelines -->
+        <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-xs space-y-2">
+          <h4 class="font-bold text-white flex items-center gap-2"><i data-lucide="link" class="size-4 text-brand-kick"></i> Call to Action (Llamado a la Acción hacia Kick)</h4>
+          <p class="text-slate-300">En cada video colocar en texto discreto o subtítulo: <code>kick.com/JONPEEK</code>.</p>
+          <p class="text-slate-400">En el comentario fijado o descripción: <em>"Análisis completos y seguimiento de partidos en directo en Kick (link en perfil)"</em>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 6: SETTINGS & TIERS (ADMIN ONLY) -->
+    <section id="tab-settings" class="tab-content hidden space-y-6">
+      <div class="glass-card rounded-2xl p-8 max-w-3xl mx-auto space-y-6">
+        <div>
+          <h2 class="font-black text-xl text-white">Configuración de Tiers de Pago & Vistas</h2>
+          <p class="text-xs text-slate-400">Modifica los umbrales de visualizaciones, el pago en dólares correspondiente y el PIN de administrador.</p>
+        </div>
+
+        <form id="settings-form" onsubmit="saveSettings(event)" class="space-y-6">
+          <div class="space-y-4">
+            <h3 class="font-bold text-sm text-brand-kick uppercase tracking-wider">Tramos de Pago</h3>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                <label class="font-bold text-amber-400">🥉 Nivel 1: Desde 10,000 Views</label>
+                <div class="flex items-center gap-2">
+                  <span class="text-slate-400 font-bold">$</span>
+                  <input type="number" id="tier-1-payout" value="5" class="w-full p-2 bg-slate-950 border border-slate-700 rounded-lg text-white font-bold">
+                  <span class="text-slate-400">USD</span>
+                </div>
+              </div>
+
+              <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                <label class="font-bold text-sky-400">🥈 Nivel 2: Desde 50,000 Views</label>
+                <div class="flex items-center gap-2">
+                  <span class="text-slate-400 font-bold">$</span>
+                  <input type="number" id="tier-2-payout" value="25" class="w-full p-2 bg-slate-950 border border-slate-700 rounded-lg text-white font-bold">
+                  <span class="text-slate-400">USD</span>
+                </div>
+              </div>
+
+              <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                <label class="font-bold text-yellow-400">🥇 Nivel 3: Desde 100,000 Views</label>
+                <div class="flex items-center gap-2">
+                  <span class="text-slate-400 font-bold">$</span>
+                  <input type="number" id="tier-3-payout" value="40" class="w-full p-2 bg-slate-950 border border-slate-700 rounded-lg text-white font-bold">
+                  <span class="text-slate-400">USD</span>
+                </div>
+              </div>
+
+              <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                <label class="font-bold text-purple-400">💎 Nivel 4: Desde 500,000 Views</label>
+                <div class="flex items-center gap-2">
+                  <span class="text-slate-400 font-bold">$</span>
+                  <input type="number" id="tier-4-payout" value="120" class="w-full p-2 bg-slate-950 border border-slate-700 rounded-lg text-white font-bold">
+                  <span class="text-slate-400">USD</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Database Backup section -->
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3 text-xs">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h4 class="font-bold text-slate-200 flex items-center gap-1.5"><i data-lucide="database" class="size-4 text-emerald-400"></i> Copia de Seguridad & Memoria</h4>
+                  <p class="text-slate-400 text-[11px] mt-0.5">Descarga una copia completa de todos los clips, liquidaciones y configuración en formato JSON.</p>
+                </div>
+                <a href="/api/backup" target="_blank" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 font-bold text-xs flex items-center gap-1.5">
+                  <i data-lucide="download" class="size-3.5"></i> Descargar Backup JSON
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-white/5 flex items-center justify-end gap-3">
+            <button type="submit" class="px-6 py-2.5 rounded-xl bg-brand-kick text-black font-bold text-sm hover:bg-brand-kickHover transition-all flex items-center gap-2">
+              <i data-lucide="save" class="size-4"></i> Guardar y Recalcular Clips
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: NEW / EDIT CLIP (WITH AUTO-FETCH BUTTON) -->
+  <div id="clip-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-lg w-full p-6 space-y-5 border border-slate-700 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-white/5 pb-3">
+        <h3 id="modal-title" class="font-bold text-lg text-white flex items-center gap-2">
+          <i data-lucide="video" class="size-5 text-brand-kick"></i> Subir Enlace de Clip
+        </h3>
+        <button onclick="closeClipModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+          <i data-lucide="x" class="size-5"></i>
+        </button>
+      </div>
+
+      <form id="clip-form" onsubmit="handleClipSubmit(event)" class="space-y-4 text-xs">
+        <input type="hidden" id="clip-id">
+
+        <!-- Clipper Select -->
+        <div class="space-y-1.5">
+          <label class="font-semibold text-slate-300">Clipper Responsable *</label>
+          <select id="clip-clipper-id" required class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-brand-kick">
+            <!-- Dynamic clippers -->
+          </select>
+        </div>
+
+        <!-- Video URL with Auto Fetch Button -->
+        <div class="space-y-1.5">
+          <label class="font-semibold text-slate-300">Enlace del Video (TikTok, Shorts, Reels, X) *</label>
+          <div class="flex gap-2">
+            <input type="url" id="clip-url" required onblur="fetchUrlMetadata(this.value)" placeholder="https://www.youtube.com/shorts/... o https://tiktok.com/@..." class="flex-1 p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-kick font-mono">
+            <button type="button" onclick="fetchUrlMetadata(document.getElementById('clip-url').value)" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-brand-kick font-semibold text-xs flex items-center gap-1">
+              <i data-lucide="refresh-cw" class="size-3.5"></i> Auto
+            </button>
+          </div>
+        </div>
+
+        <!-- Title & Category -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="space-y-1.5">
+            <label class="font-semibold text-slate-300">Título del Clip</label>
+            <input type="text" id="clip-title" placeholder="Ej. Cuota 3.80 acertada en directo" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-kick">
+          </div>
+          <div class="space-y-1.5">
+            <label class="font-semibold text-slate-300">Categoría</label>
+            <select id="clip-category" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-brand-kick">
+              <option value="Pick Verde">Pick Verde / Acierto</option>
+              <option value="Análisis Anti-Humo">Análisis Anti-Humo / Datos</option>
+              <option value="Momentos Tensión">Momentos Tensión / VAR</option>
+              <option value="Bankroll & Psicología">Bankroll & Psicología</option>
+              <option value="Casino & Multiplicador">Casino / Multiplicador</option>
+              <option value="Just Chatting">Just Chatting / Humor</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Views & Dates -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="space-y-1.5">
+            <label class="font-semibold text-slate-300">Vistas *</label>
+            <input type="number" id="clip-views" required min="0" placeholder="10500" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-bold focus:outline-none focus:border-brand-kick">
+          </div>
+          <div class="space-y-1.5">
+            <label class="font-semibold text-slate-300">Fecha Publicación</label>
+            <input type="date" id="clip-publish-date" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-brand-kick">
+          </div>
+          <div class="space-y-1.5">
+            <label class="font-semibold text-slate-300">Fecha de Corte</label>
+            <input type="date" id="clip-check-date" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-brand-kick">
+          </div>
+        </div>
+
+        <!-- Status & Notes -->
+        <div class="space-y-1.5 admin-only">
+          <label class="font-semibold text-slate-300">Estado de Liquidación</label>
+          <select id="clip-status" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-brand-kick">
+            <option value="pending">⏳ Pendiente de Pago</option>
+            <option value="approved">✅ Aprobado para Liquidar</option>
+            <option value="paid">💸 Pagado / Liquidado</option>
+          </select>
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="font-semibold text-slate-300">Notas / Comentarios</label>
+          <textarea id="clip-notes" rows="2" placeholder="Detalles de retención, enlace a Kick en comentarios, etc." class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-kick"></textarea>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="pt-3 border-t border-white/5 flex items-center justify-end gap-3">
+          <button type="button" onclick="closeClipModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700">Cancelar</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-brand-kick text-black font-bold hover:bg-brand-kickHover flex items-center gap-2">
+            <i data-lucide="check" class="size-4"></i> Guardar Clip
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: VIDEO PREVIEW (HYPER-DETAILED) -->
+  <div id="preview-modal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-4xl w-full p-6 space-y-4 border border-slate-700 max-h-[95vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-white/10 pb-3">
+        <div class="flex items-center gap-2">
+          <span id="preview-platform-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-red-500/20 text-red-400">YouTube</span>
+          <h3 id="preview-title" class="font-bold text-base text-white truncate max-w-md">Título del Video</h3>
+        </div>
+        <button onclick="closePreviewModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+          <i data-lucide="x" class="size-5"></i>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+        <!-- Video Player / Embed Container -->
+        <div class="flex items-center justify-center bg-black/60 rounded-2xl p-2 border border-slate-800">
+          <div id="preview-player-container" class="video-preview-wrapper flex items-center justify-center text-center p-4 text-slate-400 text-xs">
+            <!-- Iframe or Fallback Card injected here -->
+          </div>
+        </div>
+
+        <!-- Hyper Detailed Metrics Box -->
+        <div class="space-y-4 text-xs">
+          <!-- Views & Payout Highlight Card -->
+          <div class="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-slate-400 text-xs">Vistas Verificadas</span>
+                <div id="preview-views" class="text-3xl font-black text-white">0</div>
+              </div>
+              <div class="text-right">
+                <span class="text-slate-400 text-xs">Remuneración</span>
+                <div id="preview-payout" class="text-3xl font-black text-emerald-400">$0 USD</div>
+              </div>
+            </div>
+
+            <div id="preview-tier-badge" class="px-3 py-1.5 rounded-xl font-bold text-center badge-tier-1">
+              🥉 Nivel 1 (10K+ Views)
+            </div>
+          </div>
+
+          <!-- Metadata List -->
+          <div class="space-y-2 p-4 rounded-xl bg-slate-950/60 border border-white/5">
+            <div class="flex justify-between py-1 border-b border-white/5">
+              <span class="text-slate-400">Clipper:</span>
+              <span id="preview-clipper" class="font-bold text-white">-</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-white/5">
+              <span class="text-slate-400">Categoría:</span>
+              <span id="preview-category" class="font-semibold text-slate-200">-</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-white/5">
+              <span class="text-slate-400">Fecha Publicación:</span>
+              <span id="preview-publish-date" class="text-slate-300">-</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-white/5">
+              <span class="text-slate-400">Fecha Corte:</span>
+              <span id="preview-check-date" class="text-slate-300">-</span>
+            </div>
+            <div class="flex justify-between py-1">
+              <span class="text-slate-400">Estado:</span>
+              <span id="preview-status" class="font-bold text-amber-400">-</span>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div class="p-3 rounded-xl bg-slate-900/50 border border-white/5">
+            <span class="text-slate-400 font-semibold block mb-1">Notas:</span>
+            <p id="preview-notes" class="text-slate-300 italic text-xs">Sin notas adicionales.</p>
+          </div>
+
+          <!-- Direct Link -->
+          <div class="pt-2 flex items-center gap-3">
+            <a id="preview-direct-link" href="#" target="_blank" class="flex-1 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-center flex items-center justify-center gap-2">
+              <i data-lucide="external-link" class="size-4"></i> Abrir en Plataforma Original
+            </a>
+            <button id="preview-edit-btn" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300" title="Editar Métricas">
+              <i data-lucide="edit" class="size-4"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADMIN PIN CHECK -->
+  <div id="pin-modal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-sm w-full p-6 space-y-4 border border-slate-700 text-center">
+      <div class="size-12 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 mx-auto flex items-center justify-center">
+        <i data-lucide="lock" class="size-6"></i>
+      </div>
+      <h3 class="font-bold text-lg text-white">Acceso de Administrador</h3>
+      <p class="text-xs text-slate-400">Introduce el PIN de Administrador (Jon & Manager) para acceder al panel de control total.</p>
+      
+      <form onsubmit="verifyAdminPin(event)" class="space-y-4">
+        <input type="password" id="pin-input" autofocus maxlength="8" placeholder="PIN (por defecto 1234)" class="w-full text-center tracking-widest text-lg font-mono p-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-brand-kick">
+        <div id="pin-error" class="hidden text-xs text-red-400 font-semibold">PIN incorrecto.</div>
+        <div class="flex gap-2">
+          <button type="button" onclick="cancelAdminPin()" class="flex-1 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs">Cancelar</button>
+          <button type="submit" class="flex-1 py-2 rounded-xl bg-brand-kick text-black font-bold text-xs">Entrar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: NEW EVENT -->
+  <div id="event-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-700">
+      <div class="flex items-center justify-between border-b border-white/5 pb-3">
+        <h3 class="font-bold text-base text-white flex items-center gap-2">
+          <i data-lucide="calendar" class="size-5 text-brand-kick"></i> Asignar Stream / Evento
+        </h3>
+        <button onclick="closeEventModal()" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="size-5"></i>
+        </button>
+      </div>
+      <form id="event-form" onsubmit="handleEventSubmit(event)" class="space-y-4 text-xs">
+        <div class="space-y-1.5">
+          <label class="font-semibold text-slate-300">Título del Evento / Stream *</label>
+          <input type="text" id="event-title" required placeholder="Ej. Real Madrid vs Barcelona (Directo Kick)" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-brand-kick">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="space-y-1.5">
+            <label class="font-semibold text-slate-300">Fecha *</label>
+            <input type="date" id="event-date" required class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-brand-kick">
+          </div>
+          <div class="space-y-1.5">
+            <label class="font-semibold text-slate-300">Hora</label>
+            <input type="text" id="event-time" placeholder="20:00 CEST" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-brand-kick">
+          </div>
+        </div>
+        <div class="space-y-1.5">
+          <label class="font-semibold text-slate-300">Asignar a Clipper(s) *</label>
+          <input type="text" id="event-assigned" required placeholder="Ej. Clipper 1, Clipper 2" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-brand-kick">
+        </div>
+        <div class="space-y-1.5">
+          <label class="font-semibold text-slate-300">Tipo de Contenido a Extraer</label>
+          <input type="text" id="event-type" placeholder="Ej. Picks en directo, goles clave, rages" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-brand-kick">
+        </div>
+        <div class="pt-3 border-t border-white/5 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeEventModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300">Cancelar</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-brand-kick text-black font-bold">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="border-t border-white/5 bg-slate-950/60 py-4 px-4 text-center text-xs text-slate-500">
+    <p>Jonpeek Clippers Management Platform &copy; 2026 | Desarrollado para gestión de equipos de contenido deportivo</p>
+  </footer>
+
+  <!-- App JS -->
+  <script src="js/app.js"></script>
+</body>
+</html>
