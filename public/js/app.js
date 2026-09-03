@@ -6,8 +6,8 @@ let state = {
   events: [],
   currentTab: 'dashboard',
   selectedClipForPreview: null,
-  currentRole: 'admin', // 'admin', 'c1', 'c2', 'c3', 'c4', 'c5'
-  isAdminAuthenticated: true,
+  currentRole: 'c1', // Default to Clipper 1 (never Admin by default)
+  isAdminAuthenticated: false,
   selectedMonth: new Date().toISOString().slice(0, 7) // '2026-09'
 };
 
@@ -17,6 +17,25 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function initApp() {
+  // Check if admin was already authenticated in this session
+  if (sessionStorage.getItem('jp_admin_auth') === 'true') {
+    state.isAdminAuthenticated = true;
+  }
+
+  // Parse URL query parameters for direct links (e.g. ?c=1 or ?clipper=c2 or ?admin=1)
+  const urlParams = new URLSearchParams(window.location.search);
+  const clipperParam = urlParams.get('c') || urlParams.get('clipper');
+  const adminParam = urlParams.get('admin');
+
+  if (adminParam && state.isAdminAuthenticated) {
+    state.currentRole = 'admin';
+  } else if (clipperParam) {
+    const roleKey = clipperParam.startsWith('c') ? clipperParam : `c${clipperParam}`;
+    state.currentRole = roleKey;
+  } else if (!state.isAdminAuthenticated) {
+    state.currentRole = 'c1';
+  }
+
   await Promise.all([
     fetchSettings(),
     fetchClippers(),
@@ -27,9 +46,18 @@ async function initApp() {
 
   populateClipperDropdowns();
   populateMonthDropdown();
+  
+  // Set role dropdown to active role
+  const roleSelect = document.getElementById('user-role-select');
+  if (roleSelect) roleSelect.value = state.currentRole;
+
   applyRoleView(state.currentRole);
   renderAll();
   lucide.createIcons();
+
+  if (adminParam && !state.isAdminAuthenticated) {
+    openAdminPinModal();
+  }
 
   const today = new Date().toISOString().split('T')[0];
   const publishInput = document.getElementById('clip-publish-date');
@@ -238,6 +266,7 @@ async function verifyAdminPin(e) {
     const data = await res.json();
     if (res.ok) {
       state.isAdminAuthenticated = true;
+      sessionStorage.setItem('jp_admin_auth', 'true');
       state.currentRole = 'admin';
       document.getElementById('pin-modal').classList.add('hidden');
       document.getElementById('user-role-select').value = 'admin';
@@ -249,6 +278,14 @@ async function verifyAdminPin(e) {
   } catch (err) {
     alert('Error de conexión.');
   }
+}
+
+function logoutAdmin() {
+  state.isAdminAuthenticated = false;
+  sessionStorage.removeItem('jp_admin_auth');
+  state.currentRole = 'c1';
+  document.getElementById('user-role-select').value = 'c1';
+  applyRoleView('c1');
 }
 
 function applyRoleView(role) {
@@ -265,6 +302,12 @@ function applyRoleView(role) {
       el.classList.add('hidden');
     }
   });
+
+  const lockBtn = document.getElementById('admin-lock-btn');
+  if (lockBtn) {
+    if (isAdmin) lockBtn.classList.remove('hidden');
+    else lockBtn.classList.add('hidden');
+  }
 
   if (isAdmin) {
     if (mobileBadge) mobileBadge.innerText = '👑 Admin';
@@ -586,8 +629,15 @@ function renderPayoutsGrid() {
             <h3 class="font-bold text-lg text-white mt-1">${clipper.name}</h3>
             <p class="text-xs text-slate-400">${clipper.role || 'Editor de Contenido'}</p>
           </div>
-          <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-400">
-            <i data-lucide="user" class="size-5"></i>
+          <div class="flex items-center gap-1.5">
+            ${isAdmin ? `
+              <button onclick="openEditClipperModal('${clipper.id}')" class="p-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-brand-kick hover:text-brand-kick text-slate-300 transition-all" title="Modificar Perfil del Clipper">
+                <i data-lucide="edit" class="size-4"></i>
+              </button>
+            ` : ''}
+            <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400">
+              <i data-lucide="user" class="size-4"></i>
+            </div>
           </div>
         </div>
 
@@ -1081,4 +1131,54 @@ async function saveSettings(e) {
 
 function exportCSV() {
   window.open('/api/export/csv', '_blank');
+}
+
+// --- Clipper Profile Management ---
+
+function openEditClipperModal(clipperId) {
+  const clipper = state.clippers.find(c => c.id === clipperId);
+  if (!clipper) return;
+
+  document.getElementById('edit-clipper-id').value = clipper.id;
+  document.getElementById('edit-clipper-name').value = clipper.name || '';
+  document.getElementById('edit-clipper-handle').value = clipper.handle || '';
+  document.getElementById('edit-clipper-role').value = clipper.role || '';
+  document.getElementById('edit-clipper-active').checked = clipper.active !== false;
+
+  document.getElementById('edit-clipper-modal').classList.remove('hidden');
+  lucide.createIcons();
+}
+
+function closeEditClipperModal() {
+  document.getElementById('edit-clipper-modal').classList.add('hidden');
+}
+
+async function handleSaveClipperProfile(e) {
+  e.preventDefault();
+  const id = document.getElementById('edit-clipper-id').value;
+  const name = document.getElementById('edit-clipper-name').value.trim();
+  const handle = document.getElementById('edit-clipper-handle').value.trim();
+  const role = document.getElementById('edit-clipper-role').value.trim();
+  const active = document.getElementById('edit-clipper-active').checked;
+
+  try {
+    const res = await fetch(`/api/clippers/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, handle, role, active })
+    });
+
+    if (res.ok) {
+      closeEditClipperModal();
+      await Promise.all([fetchClippers(), fetchClips(), fetchStats()]);
+      populateClipperDropdowns();
+      applyRoleView(state.currentRole);
+      renderAll();
+      alert('✅ Perfil del Clipper actualizado con éxito.');
+    } else {
+      alert('Error al actualizar el clipper.');
+    }
+  } catch (err) {
+    alert('Error de conexión: ' + err.message);
+  }
 }

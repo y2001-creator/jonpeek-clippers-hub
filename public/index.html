@@ -79,6 +79,9 @@
             <option value="c4" class="bg-slate-900 text-white">🎬 Clipper 4 (Bankroll / Tips)</option>
             <option value="c5" class="bg-slate-900 text-white">🎬 Clipper 5 (Casino / Just Chatting)</option>
           </select>
+          <button id="admin-lock-btn" onclick="logoutAdmin()" class="hidden px-2 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-[10px] font-bold flex items-center gap-1" title="Cerrar sesión de Admin">
+            <i data-lucide="lock" class="size-3"></i> Salir
+          </button>
         </div>
 
         <button onclick="openNewClipModal()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-brand-kick to-emerald-400 hover:from-brand-kickHover hover:to-emerald-500 text-black font-bold text-xs shadow-lg shadow-brand-kick/20 transition-all active:scale-95">
@@ -777,6 +780,45 @@
         <div class="pt-3 border-t border-white/5 flex items-center justify-end gap-2">
           <button type="button" onclick="closeEventModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300">Cancelar</button>
           <button type="submit" class="px-4 py-2 rounded-xl bg-brand-kick text-black font-bold">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: EDIT CLIPPER PROFILE -->
+  <div id="edit-clipper-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-700">
+      <div class="flex items-center justify-between border-b border-white/5 pb-3">
+        <h3 class="font-bold text-base text-white flex items-center gap-2">
+          <i data-lucide="user-cog" class="size-5 text-brand-kick"></i> Modificar Perfil de Clipper
+        </h3>
+        <button onclick="closeEditClipperModal()" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="size-5"></i>
+        </button>
+      </div>
+      <form id="edit-clipper-form" onsubmit="handleSaveClipperProfile(event)" class="space-y-4 text-xs">
+        <input type="hidden" id="edit-clipper-id">
+        <div class="space-y-1.5">
+          <label class="font-semibold text-slate-300">Nombre del Clipper *</label>
+          <input type="text" id="edit-clipper-name" required class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-brand-kick font-bold">
+        </div>
+        <div class="space-y-1.5">
+          <label class="font-semibold text-slate-300">Usuario / Handle (TikTok, IG, etc.) *</label>
+          <input type="text" id="edit-clipper-handle" required placeholder="@usuario_cliper" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono focus:outline-none focus:border-brand-kick">
+        </div>
+        <div class="space-y-1.5">
+          <label class="font-semibold text-slate-300">Formato / Rol Asignado</label>
+          <input type="text" id="edit-clipper-role" placeholder="Ej. Picks Verdes y Cuotas en Vivo" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-brand-kick">
+        </div>
+        <div class="flex items-center gap-2 pt-1">
+          <input type="checkbox" id="edit-clipper-active" class="rounded border-slate-700 bg-slate-900 text-brand-kick focus:ring-brand-kick">
+          <label for="edit-clipper-active" class="text-slate-300 font-semibold cursor-pointer">Clipper Activo en el Equipo</label>
+        </div>
+        <div class="pt-3 border-t border-white/5 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeEditClipperModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold">Cancelar</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-brand-kick text-black font-bold flex items-center gap-1.5">
+            <i data-lucide="check" class="size-4"></i> Guardar Cambios
+          </button>
         </div>
       </form>
     </div>

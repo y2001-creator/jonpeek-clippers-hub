@@ -562,6 +562,36 @@ app.get('/api/clippers', (req, res) => {
   res.json(db.clippers || []);
 });
 
+// Update Clipper Profile
+app.put('/api/clippers/:id', (req, res) => {
+  const db = readDB();
+  const clipperIndex = db.clippers.findIndex(c => c.id === req.params.id);
+  if (clipperIndex === -1) return res.status(404).json({ error: "Clipper no encontrado" });
+
+  const updatedClipper = {
+    ...db.clippers[clipperIndex],
+    name: req.body.name || db.clippers[clipperIndex].name,
+    handle: req.body.handle || db.clippers[clipperIndex].handle,
+    role: req.body.role || db.clippers[clipperIndex].role,
+    active: req.body.active !== undefined ? req.body.active : db.clippers[clipperIndex].active
+  };
+
+  db.clippers[clipperIndex] = updatedClipper;
+
+  // Also update clipperName on all their clips
+  if (req.body.name) {
+    db.clips = db.clips.map(clip => {
+      if (clip.clipperId === req.params.id) {
+        return { ...clip, clipperName: req.body.name };
+      }
+      return clip;
+    });
+  }
+
+  writeDB(db);
+  res.json(updatedClipper);
+});
+
 app.post('/api/clippers/:id/payout', (req, res) => {
   const db = readDB();
   const clipperId = req.params.id;
