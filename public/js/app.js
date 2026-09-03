@@ -783,6 +783,7 @@ function getTierClass(badge) {
 function populateClipperDropdowns() {
   const selectModal = document.getElementById('clip-clipper-id');
   const selectFilter = document.getElementById('filter-clipper');
+  const userRoleSelect = document.getElementById('user-role-select');
 
   if (selectModal) {
     selectModal.innerHTML = state.clippers.map(c => `
@@ -791,9 +792,20 @@ function populateClipperDropdowns() {
   }
 
   if (selectFilter) {
-    selectFilter.innerHTML = `<option value="">Todos los Clippers</option>` + state.clippers.map(c => `
+    selectFilter.innerHTML = `<option value="">Todos los Clippers (${state.clippers.length})</option>` + state.clippers.map(c => `
       <option value="${c.id}">${c.name}</option>
     `).join('');
+  }
+
+  if (userRoleSelect) {
+    const currentVal = userRoleSelect.value || state.currentRole;
+    userRoleSelect.innerHTML = `
+      <option value="admin" class="bg-slate-900 text-amber-400">👑 Jon & Manager (Admin)</option>
+      ${state.clippers.map(c => `
+        <option value="${c.id}" class="bg-slate-900 text-white">🎬 ${c.name} (${c.role || c.handle})</option>
+      `).join('')}
+    `;
+    userRoleSelect.value = currentVal;
   }
 }
 
@@ -1271,4 +1283,61 @@ function copyClipperLink(url) {
   }).catch(() => {
     prompt('Copia este enlace:', url);
   });
+}
+
+// --- Create New Clipper Modal Handlers ---
+
+function openNewClipperModal() {
+  const modal = document.getElementById('new-clipper-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+
+  const form = document.getElementById('new-clipper-form');
+  if (form) form.reset();
+
+  const nextNum = (state.clippers ? state.clippers.length : 0) + 1;
+  const nameInput = document.getElementById('new-clipper-name');
+  const handleInput = document.getElementById('new-clipper-handle');
+  const roleInput = document.getElementById('new-clipper-role');
+
+  if (nameInput) nameInput.value = `Clipper ${nextNum}`;
+  if (handleInput) handleInput.value = `@clipper${nextNum}_jp`;
+  if (roleInput) roleInput.value = `Picks y Contenido Viral`;
+
+  if (nameInput) nameInput.focus();
+  lucide.createIcons();
+}
+
+function closeNewClipperModal() {
+  const modal = document.getElementById('new-clipper-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function handleCreateClipperSubmit(e) {
+  e.preventDefault();
+  const name = document.getElementById('new-clipper-name').value.trim();
+  const handle = document.getElementById('new-clipper-handle').value.trim();
+  const role = document.getElementById('new-clipper-role').value.trim();
+
+  try {
+    const res = await fetch('/api/clippers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, handle, role, active: true })
+    });
+
+    if (res.ok) {
+      const created = await res.json();
+      closeNewClipperModal();
+      await Promise.all([fetchClippers(), fetchClips(), fetchStats()]);
+      populateClipperDropdowns();
+      applyRoleView(state.currentRole);
+      renderAll();
+      alert(`🎉 ¡Clipper "${created.name}" agregado con éxito al equipo! ID asignado: ${created.id.toUpperCase()}`);
+    } else {
+      alert('Error al agregar el clipper.');
+    }
+  } catch (err) {
+    alert('Error de conexión: ' + err.message);
+  }
 }

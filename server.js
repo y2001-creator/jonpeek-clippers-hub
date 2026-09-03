@@ -562,6 +562,40 @@ app.get('/api/clippers', (req, res) => {
   res.json(db.clippers || []);
 });
 
+// Create New Clipper
+app.post('/api/clippers', (req, res) => {
+  const db = readDB();
+  db.clippers = db.clippers || [];
+
+  let nextNum = db.clippers.length + 1;
+  while (db.clippers.some(c => c.id === `c${nextNum}`)) {
+    nextNum++;
+  }
+  const nextId = req.body.id || `c${nextNum}`;
+
+  const newClipper = {
+    id: nextId,
+    name: req.body.name || `Clipper ${nextNum}`,
+    handle: req.body.handle || `@clipper${nextNum}_jp`,
+    role: req.body.role || "Editor de Contenido General",
+    active: req.body.active !== undefined ? req.body.active : true,
+    createdAt: new Date().toISOString()
+  };
+
+  db.clippers.push(newClipper);
+  writeDB(db);
+
+  res.status(201).json(newClipper);
+});
+
+// Delete Clipper
+app.delete('/api/clippers/:id', (req, res) => {
+  const db = readDB();
+  db.clippers = (db.clippers || []).filter(c => c.id !== req.params.id);
+  writeDB(db);
+  res.json({ success: true });
+});
+
 // Update Clipper Profile
 app.put('/api/clippers/:id', (req, res) => {
   const db = readDB();

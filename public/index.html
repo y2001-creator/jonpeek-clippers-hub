@@ -381,8 +381,11 @@
           <h2 class="font-black text-xl text-white flex items-center gap-2">
             <i data-lucide="users" class="size-6 text-brand-kick"></i> Gestión del Equipo de Clippers
           </h2>
-          <p class="text-xs text-slate-400">Modifica nombres reales, usuarios de TikTok/FB, nichos asignados y copia sus enlaces de acceso personal</p>
+          <p class="text-xs text-slate-400">Modifica nombres reales, usuarios de TikTok/FB, nichos asignados y crea nuevos puestos de clippers</p>
         </div>
+        <button onclick="openNewClipperModal()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-kick to-emerald-400 hover:from-brand-kickHover hover:to-emerald-500 text-black font-bold text-xs flex items-center gap-2 shadow-lg shadow-brand-kick/20 transition-all active:scale-95 whitespace-nowrap">
+          <i data-lucide="user-plus" class="size-4"></i> + Agregar Nuevo Clipper
+        </button>
       </div>
 
       <!-- Clipper Profiles Grid -->
@@ -838,6 +841,40 @@
           <button type="button" onclick="closeEditClipperModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold">Cancelar</button>
           <button type="submit" class="px-4 py-2 rounded-xl bg-brand-kick text-black font-bold flex items-center gap-1.5">
             <i data-lucide="check" class="size-4"></i> Guardar Cambios
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CREATE NEW CLIPPER -->
+  <div id="new-clipper-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-700">
+      <div class="flex items-center justify-between border-b border-white/5 pb-3">
+        <h3 class="font-bold text-base text-white flex items-center gap-2">
+          <i data-lucide="user-plus" class="size-5 text-brand-kick"></i> Agregar Nuevo Clipper al Equipo
+        </h3>
+        <button onclick="closeNewClipperModal()" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="size-5"></i>
+        </button>
+      </div>
+      <form id="new-clipper-form" onsubmit="handleCreateClipperSubmit(event)" class="space-y-4 text-xs">
+        <div class="space-y-1.5">
+          <label class="font-semibold text-slate-300">Nombre del Clipper *</label>
+          <input type="text" id="new-clipper-name" required placeholder="Ej. Clipper 6 o Nombre Real" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-brand-kick font-bold">
+        </div>
+        <div class="space-y-1.5">
+          <label class="font-semibold text-slate-300">Usuario / Handle (TikTok o Redes) *</label>
+          <input type="text" id="new-clipper-handle" required placeholder="@usuario_cliper" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono focus:outline-none focus:border-brand-kick">
+        </div>
+        <div class="space-y-1.5">
+          <label class="font-semibold text-slate-300">Formato / Rol Asignado *</label>
+          <input type="text" id="new-clipper-role" required placeholder="Ej. Pronósticos en Vivo, VAR, Tendencias" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-brand-kick">
+        </div>
+        <div class="pt-3 border-t border-white/5 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeNewClipperModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold">Cancelar</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-brand-kick text-black font-bold flex items-center gap-1.5">
+            <i data-lucide="plus-circle" class="size-4"></i> Crear y Activar Clipper
           </button>
         </div>
       </form>
