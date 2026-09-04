@@ -4,10 +4,57 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const http = require('http');
+const mongoose = require('mongoose');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DB_FILE = path.join(__dirname, 'data', 'database.json');
+const MONGODB_URI = process.env.MONGODB_URI;
+
+let isMongoConnected = false;
+let memoryCache = null;
+
+// Mongoose Schema for Persistent Cloud Storage
+const HubDBSchema = new mongoose.Schema({
+  docId: { type: String, default: 'main', unique: true },
+  data: { type: Object, default: {} }
+}, { timestamps: true });
+
+const HubModel = mongoose.models.HubDB || mongoose.model('HubDB', HubDBSchema);
+
+async function initMongoDB() {
+  if (!MONGODB_URI) {
+    console.log('ℹ️ MONGODB_URI no detectado en variables de entorno. Usando base de datos local (data/database.json).');
+    return;
+  }
+  try {
+    console.log('🔄 Conectando a MongoDB Atlas en la nube...');
+    await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000
+    });
+    isMongoConnected = true;
+    console.log('✅ ¡Conectado exitosamente a MongoDB Atlas Cloud Database! Persistencia 24/7 activada.');
+
+    const doc = await HubModel.findOne({ docId: 'main' });
+    if (doc && doc.data && (doc.data.clippers || doc.data.clips)) {
+      memoryCache = doc.data;
+      console.log(`📦 Datos cargados desde la nube (${memoryCache.clips ? memoryCache.clips.length : 0} clips, ${memoryCache.clippers ? memoryCache.clippers.length : 0} clippers).`);
+      writeDBFile(memoryCache);
+    } else {
+      console.log('🌱 Inicializando MongoDB Atlas con datos base...');
+      const localData = readDBFile();
+      await HubModel.findOneAndUpdate(
+        { docId: 'main' },
+        { docId: 'main', data: localData },
+        { upsert: true, new: true }
+      );
+      memoryCache = localData;
+    }
+  } catch (err) {
+    console.error('⚠️ Error al conectar a MongoDB Atlas:', err.message);
+    console.log('ℹ️ Operando con base de datos local como respaldo.');
+  }
+}
 
 // Middleware
 app.use(cors());
@@ -21,7 +68,7 @@ function getInitialData() {
       streamerName: "Jonpeek",
       kickUrl: "https://kick.com/JONPEEK",
       youtubeUrl: "https://www.youtube.com/@Jonpeekcs",
-      adminPin: "1234",
+      adminPin: "2001",
       currency: "USD",
       currencySymbol: "$",
       payoutTiers: [
@@ -44,7 +91,7 @@ function getInitialData() {
   };
 }
 
-function readDB() {
+function readDBFile() {
   const dir = path.join(__dirname, 'data');
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   if (!fs.existsSync(DB_FILE)) {
@@ -60,10 +107,34 @@ function readDB() {
   }
 }
 
-function writeDB(data) {
+function writeDBFile(data) {
   const dir = path.join(__dirname, 'data');
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+function readDB() {
+  if (memoryCache) {
+    return memoryCache;
+  }
+  const fileData = readDBFile();
+  memoryCache = fileData;
+  return fileData;
+}
+
+function writeDB(data) {
+  memoryCache = data;
+  writeDBFile(data);
+
+  if (isMongoConnected) {
+    HubModel.findOneAndUpdate(
+      { docId: 'main' },
+      { $set: { data: data } },
+      { upsert: true }
+    ).catch(err => {
+      console.error('⚠️ Error guardando en MongoDB Atlas:', err.message);
+    });
+  }
 }
 
 // Payout Calculation Engine
@@ -730,9 +801,10 @@ app.get('/api/backup', (req, res) => {
 });
 
 // Server listen
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`====================================================`);
   console.log(`🚀 JONPEEK CLIPPERS HUB & AUTO-FETCHER RUNNING!`);
   console.log(`📡 URL Local: http://localhost:${PORT}`);
   console.log(`====================================================`);
+  await initMongoDB();
 });
