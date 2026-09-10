@@ -1,8 +1,8 @@
 FROM node:20-alpine
 
-# Install Python and yt-dlp
+# Install Python and dependencies
 RUN apk add --no-cache python3 py3-pip ffmpeg
-RUN pip3 install --no-cache-dir yt-dlp --break-system-packages
+RUN pip3 install --no-cache-dir yt-dlp requests --break-system-packages
 
 WORKDIR /app
 

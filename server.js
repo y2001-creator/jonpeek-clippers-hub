@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const http = require('http');
+const { spawn } = require('child_process');
 const mongoose = require('mongoose');
 
 const app = express();
@@ -762,6 +763,140 @@ app.delete('/api/events/:id', (req, res) => {
   db.events = db.events.filter(e => e.id !== req.params.id);
   writeDB(db);
   res.json({ success: true });
+});
+
+// --- KICK VOD VIRAL DETECTOR ---
+app.post('/api/analyze-kick-vod', (req, res) => {
+  const url = req.body.url || 'https://kick.com/JONPEEK';
+  console.log(`📡 Solicitud para analizar VOD de Kick: ${url}`);
+
+  const scriptPath = path.join(__dirname, 'kick_detector.py');
+  const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+
+  const py = spawn(pythonCmd, [scriptPath, url], {
+    env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
+  });
+
+  let output = '';
+  let errorOutput = '';
+
+  py.stdout.on('data', (data) => {
+    output += data.toString('utf-8');
+  });
+
+  py.stderr.on('data', (data) => {
+    errorOutput += data.toString('utf-8');
+  });
+
+  py.on('close', (code) => {
+    const jsonMarker = '--- RESULTADO EN JSON ---';
+    if (output.includes(jsonMarker)) {
+      const jsonPart = output.split(jsonMarker)[1].trim();
+      try {
+        const parsed = JSON.parse(jsonPart);
+        const db = readDB();
+        db.viralVodAnalysis = db.viralVodAnalysis || [];
+        const record = {
+          id: 'vod_' + Date.now(),
+          analyzedAt: new Date().toISOString(),
+          ...parsed
+        };
+        db.viralVodAnalysis.unshift(record);
+        if (db.viralVodAnalysis.length > 20) {
+          db.viralVodAnalysis = db.viralVodAnalysis.slice(0, 20);
+        }
+        writeDB(db);
+        return res.json(record);
+      } catch (err) {
+        console.error('⚠️ Error parseando JSON de kick_detector:', err);
+      }
+    }
+
+    if (code !== 0) {
+      console.error('❌ kick_detector terminó con código:', code, errorOutput);
+      return res.status(500).json({
+        error: 'Error al analizar el directo de Kick con IA',
+        details: errorOutput || output
+      });
+    }
+
+    return res.status(500).json({ error: 'No se pudo estructurar el resultado del análisis' });
+  });
+});
+
+app.get('/api/viral-vods', (req, res) => {
+  const db = readDB();
+  res.json(db.viralVodAnalysis || []);
+});
+
+app.delete('/api/viral-vods/:id', (req, res) => {
+  const db = readDB();
+  db.viralVodAnalysis = (db.viralVodAnalysis || []).filter(v => v.id !== req.params.id);
+  writeDB(db);
+  res.json({ success: true });
+});
+
+// --- AUTO CLIP CUTTER & DOWNLOADER (FFmpeg) ---
+app.post('/api/cut-clip', (req, res) => {
+  const { source, startSeconds, durationSeconds, title } = req.body;
+  if (!source) {
+    return res.status(400).json({ error: 'No se encontró la fuente de video del stream.' });
+  }
+
+  const downloadsDir = path.join(__dirname, 'public', 'downloads');
+  if (!fs.existsSync(downloadsDir)) {
+    fs.mkdirSync(downloadsDir, { recursive: true });
+  }
+
+  const cleanTitle = (title || 'clip_kick')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '_')
+    .slice(0, 35);
+  const filename = `${cleanTitle}_${Date.now()}.mp4`;
+  const outputPath = path.join(downloadsDir, filename);
+
+  const start = Math.max(0, parseInt(startSeconds) || 0);
+  const duration = Math.min(180, parseInt(durationSeconds) || 45);
+
+  console.log(`✂️ Cortando clip con FFmpeg: desde ${start}s durante ${duration}s -> ${filename}`);
+
+  const ffmpegArgs = [
+    '-y',
+    '-ss', String(start),
+    '-i', source,
+    '-t', String(duration),
+    '-c:v', 'libx264',
+    '-preset', 'ultrafast',
+    '-crf', '22',
+    '-c:a', 'aac',
+    '-b:a', '128k',
+    '-movflags', '+faststart',
+    outputPath
+  ];
+
+  const ffmpeg = spawn('ffmpeg', ffmpegArgs);
+
+  let errOutput = '';
+  ffmpeg.stderr.on('data', (d) => {
+    errOutput += d.toString();
+  });
+
+  ffmpeg.on('close', (code) => {
+    if (code === 0 && fs.existsSync(outputPath)) {
+      console.log(`✅ Clip cortado exitosamente: ${filename} (${fs.statSync(outputPath).size} bytes)`);
+      return res.json({
+        success: true,
+        downloadUrl: `/downloads/${filename}`,
+        filename: filename
+      });
+    }
+
+    console.error('❌ Error al cortar clip con FFmpeg:', errOutput.slice(-300));
+    return res.status(500).json({
+      error: 'No se pudo generar el corte del video',
+      details: errOutput.slice(-300)
+    });
+  });
 });
 
 // 8. CSV Export

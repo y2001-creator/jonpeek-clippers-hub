@@ -100,6 +100,9 @@
       <button onclick="switchTab('clips')" id="tab-btn-clips" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent transition-all whitespace-nowrap">
         <i data-lucide="film" class="size-4"></i> <span id="tab-label-clips">Registro de Clips & Vistas</span>
       </button>
+      <button onclick="switchTab('viral')" id="tab-btn-viral" class="tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent transition-all whitespace-nowrap">
+        <i data-lucide="sparkles" class="size-4 text-brand-kick"></i> 🎯 Detector Viral (Kick)
+      </button>
       <button onclick="switchTab('payouts')" id="tab-btn-payouts" class="tab-btn admin-only flex items-center gap-2 px-3.5 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent transition-all whitespace-nowrap">
         <i data-lucide="wallet" class="size-4"></i> Liquidaciones por Clipper
       </button>
@@ -352,6 +355,110 @@
               <!-- Dynamic Content -->
             </tbody>
           </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB: KICK VOD VIRAL DETECTOR -->
+    <section id="tab-viral" class="tab-content hidden space-y-6">
+      <!-- Hero Banner -->
+      <div class="glass-card rounded-2xl p-6 border border-brand-kick/30 bg-gradient-to-r from-brand-kick/10 via-slate-900/80 to-emerald-950/20 space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold font-mono uppercase tracking-wider bg-brand-kick/20 text-brand-kick border border-brand-kick/40 flex items-center gap-1">
+                <i data-lucide="sparkles" class="size-3"></i> Gemini 3.6 Flash IA + FFmpeg Audio Engine
+              </span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                Kick VOD Clustered
+              </span>
+            </div>
+            <h2 class="font-black text-2xl text-white mt-2 flex items-center gap-2">
+              🎯 Detector de Momentos Virales en Kick
+            </h2>
+            <p class="text-xs text-slate-300 mt-1 max-w-2xl">
+              Pega cualquier enlace de un stream o VOD de Kick. El agente rastreará los picos acústicos de euforia (gritos, celebraciones, goles, tensión) y la IA de Gemini generará las marcas de tiempo exactas, el gancho (hook) para TikTok y el clipper asignado.
+            </p>
+          </div>
+          <div class="flex flex-col sm:flex-row items-center gap-2">
+            <button onclick="analyzeLastStream()" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-brand-kick font-bold text-xs border border-brand-kick/30 flex items-center justify-center gap-2 transition-all">
+              <i data-lucide="radio" class="size-4 text-rose-500 animate-pulse"></i> Último Directo de Jonpeek
+            </button>
+          </div>
+        </div>
+
+        <!-- Input Bar -->
+        <div class="flex flex-col sm:flex-row items-stretch gap-2 pt-2">
+          <div class="relative flex-1">
+            <i data-lucide="link" class="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400"></i>
+            <input type="url" id="viral-vod-input" placeholder="Pega el enlace de Kick (ej. https://kick.com/JONPEEK o https://kick.com/video/...)" class="w-full pl-10 pr-4 py-3 bg-slate-950/90 border border-slate-700 rounded-xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-kick shadow-inner font-mono">
+          </div>
+          <button id="btn-run-detector" onclick="startVodAnalysis()" class="px-6 py-3 rounded-xl bg-gradient-to-r from-brand-kick to-emerald-400 hover:from-brand-kickHover hover:to-emerald-500 text-black font-black text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-kick/20 active:scale-95 whitespace-nowrap">
+            <i data-lucide="zap" class="size-4"></i> Detectar Momentos Virales
+          </button>
+        </div>
+
+        <!-- Status / Loader (Hidden by default) -->
+        <div id="viral-loading-state" class="hidden p-4 rounded-xl bg-slate-950/80 border border-brand-kick/20 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-brand-kick flex items-center gap-2">
+              <i data-lucide="loader-2" class="size-4 animate-spin"></i> <span id="viral-loading-msg">Conectando con el stream de Kick y analizando curvas de audio...</span>
+            </span>
+            <span class="text-[11px] font-mono text-slate-400">IA en progreso</span>
+          </div>
+          <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+            <div id="viral-progress-bar" class="bg-gradient-to-r from-brand-kick to-emerald-400 h-2 rounded-full w-2/3 animate-pulse"></div>
+          </div>
+          <p class="text-[11px] text-slate-400 italic">Extrayendo picos de decibelios y pidiendo a Gemini 3.6 Flash que titule y clasifique los clips para los 5 clippers.</p>
+        </div>
+      </div>
+
+      <!-- Results Container -->
+      <div id="viral-results-container" class="hidden space-y-4">
+        <!-- VOD Header Card -->
+        <div class="glass-card rounded-2xl p-5 border border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div class="size-12 rounded-xl bg-brand-kick/10 border border-brand-kick/30 flex items-center justify-center text-brand-kick">
+              <i data-lucide="tv" class="size-6"></i>
+            </div>
+            <div>
+              <h3 id="vod-res-title" class="font-black text-base text-white">Título del Directo</h3>
+              <div class="flex items-center gap-3 text-xs text-slate-400 mt-1">
+                <span>Canal: <strong id="vod-res-channel" class="text-brand-kick">jonpeek</strong></span>
+                <span>•</span>
+                <span>Duración: <strong id="vod-res-duration" class="text-white">00:00:00</strong></span>
+                <span>•</span>
+                <span class="text-emerald-400 font-semibold" id="vod-res-count">5 Momentos Virales</span>
+              </div>
+            </div>
+          </div>
+          <a id="vod-res-link" href="#" target="_blank" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 font-semibold flex items-center gap-2 border border-slate-700">
+            <i data-lucide="external-link" class="size-3.5"></i> Abrir Stream en Kick
+          </a>
+        </div>
+
+        <!-- Viral Clips Grid -->
+        <div id="viral-clips-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Dynamic Clips from Analysis -->
+        </div>
+      </div>
+
+      <!-- History of Analyzed VODs -->
+      <div class="glass-card rounded-2xl p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-bold text-base text-white flex items-center gap-2">
+              <i data-lucide="history" class="size-5 text-brand-kick"></i> Historial de Directos Analizados
+            </h3>
+            <p class="text-xs text-slate-400">Accede rápidamente a las marcas de tiempo de streams procesados anteriormente</p>
+          </div>
+          <button onclick="loadViralVodsHistory()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 flex items-center gap-1">
+            <i data-lucide="refresh-cw" class="size-3.5"></i> Actualizar
+          </button>
+        </div>
+
+        <div id="viral-history-list" class="divide-y divide-white/5 rounded-xl border border-white/5 overflow-hidden bg-slate-950/40">
+          <div class="p-6 text-center text-xs text-slate-400">Cargando historial de análisis...</div>
         </div>
       </div>
     </section>

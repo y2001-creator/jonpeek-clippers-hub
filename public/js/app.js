@@ -44,6 +44,33 @@ async function initApp() {
     fetchEvents()
   ]);
 
+  // Persistent storage sync (prevents Render container reset from clearing custom clipper names)
+  const cachedClippers = localStorage.getItem('jp_custom_clippers');
+  if (cachedClippers && state.clippers && state.clippers.length > 0) {
+    try {
+      const parsed = JSON.parse(cachedClippers);
+      let needsSync = false;
+      for (const custom of parsed) {
+        const current = state.clippers.find(c => c.id === custom.id);
+        if (current && (current.name !== custom.name || current.handle !== custom.handle || current.role !== custom.role || current.active !== custom.active)) {
+          needsSync = true;
+          await fetch(`/api/clippers/${custom.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(custom)
+          });
+        }
+      }
+      if (needsSync) {
+        await Promise.all([fetchClippers(), fetchClips(), fetchStats()]);
+      }
+    } catch(err) {
+      console.warn('Sync error:', err);
+    }
+  } else if (state.clippers && state.clippers.length > 0) {
+    localStorage.setItem('jp_custom_clippers', JSON.stringify(state.clippers));
+  }
+
   populateClipperDropdowns();
   populateMonthDropdown();
   
@@ -398,6 +425,9 @@ function switchTab(tabId) {
   }
   if (tabId === 'dashboard') {
     fetchStats();
+  }
+  if (tabId === 'viral') {
+    loadViralVodsHistory();
   }
 
   lucide.createIcons();
@@ -1203,10 +1233,13 @@ async function handleSaveClipperProfile(e) {
     if (res.ok) {
       closeEditClipperModal();
       await Promise.all([fetchClippers(), fetchClips(), fetchStats()]);
+      if (state.clippers && state.clippers.length > 0) {
+        localStorage.setItem('jp_custom_clippers', JSON.stringify(state.clippers));
+      }
       populateClipperDropdowns();
       applyRoleView(state.currentRole);
       renderAll();
-      alert('✅ Perfil del Clipper actualizado con éxito.');
+      alert('✅ Perfil del Clipper actualizado y guardado con éxito.');
     } else {
       alert('Error al actualizar el clipper.');
     }
@@ -1298,6 +1331,9 @@ async function deleteClipper(id, name) {
     const res = await fetch(`/api/clippers/${id}`, { method: 'DELETE' });
     if (res.ok) {
       await Promise.all([fetchClippers(), fetchClips(), fetchStats()]);
+      if (state.clippers) {
+        localStorage.setItem('jp_custom_clippers', JSON.stringify(state.clippers));
+      }
       populateClipperDropdowns();
       if (state.currentRole === id) {
         state.currentRole = 'admin';
@@ -1373,6 +1409,9 @@ async function handleCreateClipperSubmit(e) {
       const created = await res.json();
       closeNewClipperModal();
       await Promise.all([fetchClippers(), fetchClips(), fetchStats()]);
+      if (state.clippers) {
+        localStorage.setItem('jp_custom_clippers', JSON.stringify(state.clippers));
+      }
       populateClipperDropdowns();
       applyRoleView(state.currentRole);
       renderAll();
@@ -1384,3 +1423,389 @@ async function handleCreateClipperSubmit(e) {
     alert('Error de conexión: ' + err.message);
   }
 }
+
+// ==========================================
+// 🎯 DETECTOR DE MOMENTOS VIRALES EN KICK
+// ==========================================
+
+let viralHistoryCache = [];
+
+function analyzeLastStream() {
+  const input = document.getElementById('viral-vod-input');
+  if (input) input.value = 'https://kick.com/JONPEEK';
+  startVodAnalysis();
+}
+
+async function startVodAnalysis() {
+  const input = document.getElementById('viral-vod-input');
+  const url = (input.value || '').trim() || 'https://kick.com/JONPEEK';
+  input.value = url;
+
+  const btn = document.getElementById('btn-run-detector');
+  const loader = document.getElementById('viral-loading-state');
+  const resultsBox = document.getElementById('viral-results-container');
+  const loadingMsg = document.getElementById('viral-loading-msg');
+
+  btn.disabled = true;
+  btn.classList.add('opacity-50', 'cursor-not-allowed');
+  loader.classList.remove('hidden');
+  resultsBox.classList.add('hidden');
+
+  // Mensajes dinámicos de progreso para feedback visual
+  const steps = [
+    'Conectando con la API de Kick y resolviendo el video...',
+    'Rastreando picos acústicos de euforia y decibelios con FFmpeg...',
+    'Extrayendo fragmentos clave de audio de 35 segundos...',
+    'Gemini 3.6 Flash IA analizando ganchos (hooks) y títulos virales...',
+    'Clasificando clips para los 5 clippers del equipo de Jonpeek...'
+  ];
+  let stepIdx = 0;
+  loadingMsg.innerText = steps[0];
+  const stepInterval = setInterval(() => {
+    stepIdx = (stepIdx + 1) % steps.length;
+    loadingMsg.innerText = steps[stepIdx];
+  }, 4500);
+
+  try {
+    const res = await fetch('/api/analyze-kick-vod', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+
+    clearInterval(stepInterval);
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      alert('Error en el análisis: ' + (data.error || 'Ocurrió un error inesperado.'));
+      return;
+    }
+
+    renderViralVodResults(data);
+    await loadViralVodsHistory();
+  } catch (err) {
+    clearInterval(stepInterval);
+    alert('Error de conexión con el detector: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+    loader.classList.add('hidden');
+    lucide.createIcons();
+  }
+}
+
+function renderViralVodResults(record) {
+  const resultsBox = document.getElementById('viral-results-container');
+  const grid = document.getElementById('viral-clips-grid');
+  if (!resultsBox || !grid) return;
+
+  const vod = record.vod || {};
+  const clips = record.clips || [];
+
+  // Rellenar cabecera del VOD
+  document.getElementById('vod-res-title').innerText = vod.title || 'Directo de Kick';
+  document.getElementById('vod-res-channel').innerText = vod.channel || 'jonpeek';
+  document.getElementById('vod-res-duration').innerText = vod.duration || '00:00:00';
+  document.getElementById('vod-res-count').innerText = `${clips.length} Momentos Virales Detectados`;
+  
+  const linkBtn = document.getElementById('vod-res-link');
+  if (linkBtn) {
+    linkBtn.href = vod.url || `https://kick.com/${vod.channel || 'jonpeek'}`;
+  }
+
+  // Generar tarjetas de clips
+  grid.innerHTML = clips.map((clip, i) => {
+    // Colores según categoría
+    let catClass = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+    if (clip.category.includes('Polémica') || clip.category.includes('VAR')) {
+      catClass = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+    } else if (clip.category.includes('Rage') || clip.category.includes('Enfado')) {
+      catClass = 'bg-rose-500/20 text-rose-300 border-rose-500/30';
+    } else if (clip.category.includes('Casino') || clip.category.includes('Slots')) {
+      catClass = 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+    } else if (clip.category.includes('Chatting') || clip.category.includes('Humor')) {
+      catClass = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
+    }
+
+    const encodedClip = encodeURIComponent(JSON.stringify(clip));
+
+    return `
+      <div class="glass-card rounded-2xl p-5 border border-white/10 hover:border-brand-kick/40 transition-all flex flex-col justify-between space-y-4 bg-slate-900/60">
+        <!-- Top Metadata -->
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-black bg-brand-kick text-black">
+              #${clip.index || (i + 1)}
+            </span>
+            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${catClass}">
+              ${clip.category}
+            </span>
+            <span class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center gap-1">
+              🔥 ${clip.viral_score}/100
+            </span>
+          </div>
+          <span class="text-xs font-bold text-slate-400 bg-slate-800 px-2.5 py-1 rounded-lg">
+            👤 ${clip.recommended_clipper || 'Clipper Asignado'}
+          </span>
+        </div>
+
+        <!-- Timestamp & Duration Highlight -->
+        <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i data-lucide="clock" class="size-4 text-brand-kick"></i>
+            <div>
+              <span class="font-mono font-black text-sm text-white">${clip.start_time} ➔ ${clip.end_time}</span>
+              <span class="text-[11px] text-slate-400 ml-1.5">(${clip.duration_str})</span>
+            </div>
+          </div>
+          <button onclick="copyViralText('${clip.start_time}', this)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-200 font-semibold transition-all">
+            Copiar Minuto
+          </button>
+        </div>
+
+        <!-- Suggested Title -->
+        <div class="space-y-1">
+          <div class="flex items-center justify-between text-[11px] text-slate-400">
+            <span>Título Sugerido (TikTok / Shorts):</span>
+            <button onclick="copyViralText('${(clip.title || '').replace(/'/g, "\\'")}', this)" class="text-brand-kick hover:underline font-semibold text-[11px]">
+              Copiar Título
+            </button>
+          </div>
+          <p class="text-sm font-bold text-white bg-slate-950/50 p-2.5 rounded-xl border border-white/5">
+            ${clip.title}
+          </p>
+        </div>
+
+        <!-- Hook Box (3s Hook) -->
+        <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-1">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1">
+            <i data-lucide="sparkles" class="size-3"></i> Hook de Entrada (Primeros 3 seg en Pantalla)
+          </span>
+          <p class="text-xs text-amber-100 font-medium italic">
+            "${clip.hook}"
+          </p>
+        </div>
+
+        <!-- Summary -->
+        <p class="text-xs text-slate-300">
+          <strong>Contexto:</strong> ${clip.summary || 'Momento de euforia máxima detectado en el directo.'}
+        </p>
+
+        <!-- Actions -->
+        <div class="space-y-2 pt-2 border-t border-white/5">
+          <button onclick="cutAndDownloadClip('${clip.source || vod.source || ''}', ${clip.start_seconds}, ${clip.end_seconds - clip.start_seconds}, '${(clip.title || '').replace(/'/g, "\\'")}', this)" class="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-brand-kick hover:from-emerald-400 hover:to-brand-kickHover text-black font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-95 transition-all">
+            <i data-lucide="scissors" class="size-4"></i> 🎬 Cortar y Descargar Video MP4
+          </button>
+          <div class="flex items-center gap-2">
+            <a href="${clip.kick_url}" target="_blank" class="flex-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold text-xs flex items-center justify-center gap-1.5 transition-all">
+              <i data-lucide="play" class="size-3.5 text-brand-kick"></i> Abrir en Kick
+            </a>
+            <button onclick="assignViralClipToModal('${encodedClip}')" class="flex-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-700 transition-all">
+              <i data-lucide="plus-circle" class="size-3.5 text-brand-kick"></i> Asignar Clip
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  resultsBox.classList.remove('hidden');
+  lucide.createIcons();
+  resultsBox.scrollIntoView({ behavior: 'smooth' });
+}
+
+async function loadViralVodsHistory() {
+  const container = document.getElementById('viral-history-list');
+  if (!container) return;
+
+  try {
+    const res = await fetch('/api/viral-vods');
+    if (!res.ok) return;
+    const history = await res.json();
+    viralHistoryCache = history;
+
+    if (!history || history.length === 0) {
+      container.innerHTML = `
+        <div class="p-8 text-center text-xs text-slate-400 space-y-2">
+          <i data-lucide="film" class="size-8 mx-auto text-slate-600"></i>
+          <p>Aún no has analizado ningún stream de Kick.</p>
+          <p class="text-[11px] text-slate-500">Pega un enlace arriba o pulsa "Último Directo de Jonpeek" para comenzar.</p>
+        </div>
+      `;
+      lucide.createIcons();
+      return;
+    }
+
+    container.innerHTML = history.map((h, i) => {
+      const date = new Date(h.analyzedAt || Date.now()).toLocaleDateString('es-ES', {
+        day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+      });
+      const vod = h.vod || {};
+      const clipCount = (h.clips || []).length;
+
+      return `
+        <div class="p-4 flex items-center justify-between gap-3 hover:bg-slate-900/80 transition-all cursor-pointer" onclick="selectHistoryVod('${h.id}')">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="size-9 rounded-lg bg-brand-kick/10 border border-brand-kick/20 flex items-center justify-center text-brand-kick shrink-0">
+              <i data-lucide="video" class="size-4"></i>
+            </div>
+            <div class="min-w-0">
+              <p class="text-xs font-bold text-white truncate">${vod.title || 'Stream de Kick'}</p>
+              <div class="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                <span>${date}</span>
+                <span>•</span>
+                <span class="text-brand-kick font-medium">${clipCount} clips encontrados</span>
+                <span>•</span>
+                <span>${vod.duration || ''}</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0" onclick="event.stopPropagation()">
+            <button onclick="selectHistoryVod('${h.id}')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-slate-200">
+              Ver Marcas
+            </button>
+            <button onclick="deleteHistoryVod('${h.id}', event)" class="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all" title="Eliminar del historial">
+              <i data-lucide="trash-2" class="size-3.5"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    lucide.createIcons();
+  } catch (err) {
+    console.warn('Error cargando historial de VODs:', err);
+  }
+}
+
+function selectHistoryVod(vodId) {
+  const item = viralHistoryCache.find(v => v.id === vodId);
+  if (item) {
+    renderViralVodResults(item);
+  }
+}
+
+async function deleteHistoryVod(vodId, e) {
+  if (e) e.stopPropagation();
+  if (!confirm('¿Eliminar este análisis del historial?')) return;
+  try {
+    await fetch(`/api/viral-vods/${vodId}`, { method: 'DELETE' });
+    await loadViralVodsHistory();
+  } catch (err) {
+    alert('Error al eliminar: ' + err.message);
+  }
+}
+
+function assignViralClipToModal(encodedClip) {
+  try {
+    const clip = JSON.parse(decodeURIComponent(encodedClip));
+    openNewClipModal();
+
+    // Rellenar campos del modal
+    const titleInput = document.getElementById('clip-title');
+    if (titleInput) titleInput.value = clip.title || '';
+
+    const urlInput = document.getElementById('clip-url');
+    if (urlInput) urlInput.value = clip.kick_url || '';
+
+    const catSelect = document.getElementById('clip-category');
+    if (catSelect && clip.category) {
+      // Buscar la opción más cercana
+      for (let opt of catSelect.options) {
+        if (opt.value.toLowerCase().includes(clip.category.toLowerCase()) || clip.category.toLowerCase().includes(opt.value.toLowerCase())) {
+          catSelect.value = opt.value;
+          break;
+        }
+      }
+    }
+
+    const notesInput = document.getElementById('clip-notes');
+    if (notesInput) {
+      notesInput.value = `Timestamp: ${clip.start_time} - ${clip.end_time} | Hook: "${clip.hook}" | Score: ${clip.viral_score}/100`;
+    }
+
+    // Preseleccionar clipper sugerido si existe
+    if (clip.recommended_clipper) {
+      const numMatch = clip.recommended_clipper.match(/\d+/);
+      if (numMatch) {
+        const clipperId = `c${numMatch[0]}`;
+        const clipperSelect = document.getElementById('clip-clipper-id');
+        if (clipperSelect && clipperSelect.querySelector(`option[value="${clipperId}"]`)) {
+          clipperSelect.value = clipperId;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error pre-rellenando clip:', err);
+  }
+}
+
+function copyViralText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const original = btn.innerText;
+    btn.innerText = '¡Copiado! ✓';
+    btn.classList.add('text-brand-kick');
+    setTimeout(() => {
+      btn.innerText = original;
+      btn.classList.remove('text-brand-kick');
+    }, 2000);
+  }).catch(() => {
+    alert('Texto copiado: ' + text);
+  });
+}
+
+async function cutAndDownloadClip(source, startSeconds, durationSeconds, title, btn) {
+  if (!source) {
+    alert('⚠️ No se detectó la URL del stream para este video. Vuelve a ejecutar el análisis del VOD para actualizar la fuente.');
+    return;
+  }
+
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<i data-lucide="loader-2" class="size-4 animate-spin"></i> <span>Cortando con FFmpeg (espera unos seg)...</span>`;
+  lucide.createIcons();
+
+  try {
+    const res = await fetch('/api/cut-clip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source,
+        startSeconds,
+        durationSeconds: durationSeconds || 45,
+        title
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      alert('Error al cortar el video: ' + (data.error || 'Error inesperado'));
+      btn.innerHTML = originalHtml;
+      btn.disabled = false;
+      lucide.createIcons();
+      return;
+    }
+
+    // Disparar descarga directa del archivo MP4
+    const link = document.createElement('a');
+    link.href = data.downloadUrl;
+    link.download = data.filename || 'clip_viral.mp4';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    btn.innerHTML = `<span>✅ ¡Clip Descargado con Éxito!</span>`;
+    setTimeout(() => {
+      btn.innerHTML = originalHtml;
+      btn.disabled = false;
+      lucide.createIcons();
+    }, 4000);
+  } catch (err) {
+    alert('Error al procesar el corte: ' + err.message);
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+    lucide.createIcons();
+  }
+}
+
+
