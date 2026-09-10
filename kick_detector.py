@@ -261,32 +261,30 @@ def call_gemini_with_audio(audio_path, start_ts, end_ts, streamer_name="Jonpeek"
         audio_b64 = base64.b64encode(f.read()).decode("utf-8")
 
     prompt = f"""
-Eres el editor jefe y estratega de clips virales para TikTok, Shorts y Reels del streamer deportivo '{streamer_name}'.
-Tu misión es encontrar momentos con potencial de viralidad MASIVA: que generen guerra de comentarios, dividan opiniones, polaricen o muestren euforia/rage genuino.
+Eres el editor jefe de clips virales para el streamer '{streamer_name}'.
 Escucha con máxima atención este fragmento de audio del directo (Marca de tiempo: {start_ts} a {end_ts}).
 
-CRITERIOS CLAVE DE VIRALIDAD QUE DEBES PRIORIZAR:
-1. 🔥 POLARIZACIÓN Y DEBATES PICANTES: Menciones a Messi, Cristiano Ronaldo, Vinicius, Mbappé, Haaland, Lamine Yamal, rivalidades (Madrid vs Barça), Balón de Oro o comparaciones sobre quién es el mejor o el más sobrevalorado.
-2. 🤬 CRÍTICAS DURAS, HATE Y RAGEBAIT: Jonpeek destruyendo a un jugador ("está acabado", "es un paquete", "no le mete un gol al arcoíris"), quejas feroces al DT o enfados explosivos ("este equipo me está arruinando", "son unos desgraciados").
-3. 🚨 POLÉMICA ARBITRAL Y "ROBOS": Indignación con el VAR, penaltis no cobrados, tarjetas injustas o acusaciones de atraco que enciendan la furia del chat.
-4. 🟢 PICKS VERDES Y TENSIÓN DE APUESTAS: Cuotas altas cobradas agónicamente (ej. menos de 5 tarjetas, gol al 90'+) o la tensión antes de un penal decisivo.
-5. 🪝 HOOK (GANCHO) PARA RETENCIÓN: Los primeros 3 segundos DEBEN iniciar con una pregunta o frase que obligue al espectador a quedarse y comentar en TikTok (ej. "¿Estás de acuerdo con Jon?", "¿Robo histórico o acierto?", "¿Messi o Cristiano en su prime?").
+⚠️ REGLA DE ORO DE FIDELIDAD (ANTI-ALUCINACIÓN ESTRICTA):
+1. SEPARA VOCES: Diferencia la voz de Jonpeek de los comentaristas de la TV/fútbol de fondo. El clip DEBE ser sobre lo que Jonpeek dice, opina o hace, NO sobre lo que dice el narrador de la tele.
+2. PROHIBIDO INVENTAR DRAMA: NUNCA inventes que hay "robo arbitral", "atraco", "rage" o "enfado" si Jonpeek NO está explícitamente enfadado ni quejándose en el audio.
+3. VERACIDAD TOTAL: Si Jonpeek está tranquilo analizando que gana el Arsenal/Liverpool, comentando una tarjeta o revisando una apuesta, el título y el hook DEBEN ser llamativos pero 100% verídicos con lo que él dice.
+4. Si Jonpeek realmente se enfada, debate a Messi/CR7 o celebra una cuota, resáltalo fielmente.
 
 Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta:
 {{
-  "title": "Título viral de alto impacto con emojis y mayúsculas (máx 60 caracteres)",
-  "hook": "Gancho provocador para los primeros 3 seg (diseñado para obligar a comentar/debatir)",
+  "title": "Título llamativo y 100% FIEL a lo que Jonpeek dice (máx 60 caracteres)",
+  "hook": "Gancho de texto para los primeros 3 seg (real y basado en lo que ocurre)",
   "category": "Una de estas 5 categorías exactas: Picks Verdes | VAR & Polémica | Rages & Enfados | Casino & Slots | Just Chatting & Humor",
-  "viral_score": 95,
-  "viral_trigger": "Debate Messi/CR7 | Crítica / Ragebait | Polémica Arbitral / VAR | Pick Verde Épico | Momento Euforia",
-  "summary": "Resumen detallado de lo que Jonpeek dice, grita, opina o debate en este audio",
+  "viral_score": 92,
+  "viral_trigger": "Pick Verde Épico | Debate Futbolero | Análisis Táctico | Crítica Real | Momento Euforia",
+  "summary": "Resumen verídico y exacto de lo que Jonpeek dice o hace en este audio",
   "recommended_clipper": "Clipper 1",
   "football_context": {{
     "is_football": true,
-    "match": "Equipos o debate futbolístico (ej. Liverpool vs Atlético o Debate Messi vs CR7)",
-    "match_minute": "Minuto del partido o momento del debate",
-    "play_event": "Jugada o tema caliente comentado (ej. Menos de 5 tarjetas, Crítica a delantero por fallar)",
-    "search_query": "Consulta óptima para buscar el video de la jugada o resumen en YouTube"
+    "match": "Partidos o temas mencionados por Jonpeek (ej. Arsenal y Liverpool)",
+    "match_minute": "Minuto mencionado o 'En juego'",
+    "play_event": "Qué comenta realmente Jonpeek (ej. Análisis de tarjetas y goles en vivo)",
+    "search_query": "Consulta óptima para buscar el video en YouTube"
   }}
 }}
 """
