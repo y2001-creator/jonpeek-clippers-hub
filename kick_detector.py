@@ -228,6 +228,7 @@ def extract_audio_clip(m3u8_url, start_sec, duration_sec=16):
     
     cmd = [
         "ffmpeg", "-y",
+        "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
         "-ss", str(start_sec),
         "-i", m3u8_url,
         "-t", str(duration_sec),
@@ -239,7 +240,7 @@ def extract_audio_clip(m3u8_url, start_sec, duration_sec=16):
     ]
     
     try:
-        subprocess.run(cmd, capture_output=True, timeout=12)
+        subprocess.run(cmd, capture_output=True, timeout=25)
         if os.path.exists(output_path) and os.path.getsize(output_path) > 1000:
             return output_path
     except Exception:
@@ -333,8 +334,8 @@ Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta:
 
 def generate_fallback_gemini_analysis(video_title, start_ts, end_ts, index, streamer_name="Jonpeek"):
     """
-    Analiza el directo con Gemini probando varios modelos, o aplica la plantilla
-    especializada de los 5 clippers de Jonpeek (Champions, VAR, Cuotas, Casino).
+    Analiza el directo con Gemini con ángulos virales diferenciados por momento
+    (Picks Verdes, Debate Messi/CR7, VAR/Polémica, Rage/Crítica, Casino).
     """
     api_key = get_gemini_api_key()
     models = ['gemini-3.1-flash-lite-preview', 'gemini-flash-lite-latest', 'gemini-3.1-pro-preview']
@@ -342,34 +343,46 @@ def generate_fallback_gemini_analysis(video_title, start_ts, end_ts, index, stre
     clean_match = re.sub(r'#\w+', '', video_title).strip()
     match_guess = clean_match if clean_match else "Champions League / Fútbol en Vivo"
 
+    # Forzar un ángulo viral completamente distinto para cada momento (garantiza que jamás se repitan títulos)
+    angle_prompts = [
+        ("Picks Verdes", "Pick Verde Épico", "Celebración eufórica de una apuesta agónica ganada en los minutos finales (ej. menos de 5 tarjetas o gol al 92')."),
+        ("Just Chatting & Humor", "Debate Messi/CR7", "Debate ardiente sobre Messi vs Cristiano Ronaldo, Balón de Oro o quién es el mejor jugador del mundo, dividiendo el chat."),
+        ("VAR & Polémica", "Polémica Arbitral / VAR", "Indignación monumental con una decisión del VAR, penalti no cobrado o acusaciones de robo arbitral."),
+        ("Rages & Enfados", "Crítica / Ragebait", "Crítica feroz y destructiva de Jonpeek a un jugador estrella o equipo ('está sobrevalorado', 'acabado', 'son unos desgraciados')."),
+        ("Casino & Slots", "Multiplicador Slots", "Momento en las slots o casino de Kick con un multiplicador salvaje o momento gracioso interactuando con la comunidad.")
+    ]
+    chosen_cat, chosen_trigger, chosen_desc = angle_prompts[index % len(angle_prompts)]
+
     prompt = f"""
 Genera una sugerencia de clip viral de ALTO IMPACTO para el directo de {streamer_name} titulado '{video_title}'.
-Marca de tiempo del momento: {start_ts} a {end_ts} (Momento #{index+1}).
-Canal especializado en apuestas deportivas de fútbol, Champions League y casino en Kick.
+Marca de tiempo: {start_ts} a {end_ts} (Momento #{index+1}).
+TEMA OBLIGATORIO PARA ESTE MOMENTO: {chosen_desc}
+CATEGORÍA OBLIGATORIA: {chosen_cat}
+DISPARADOR VIRAL: {chosen_trigger}
 
 Responde ÚNICAMENTE en formato JSON:
 {{
-  "title": "Título llamativo para TikTok con emojis y mayúsculas (ej. ¡CUOTA 3.85 COBRADA AL 92'! 🤑⚽)",
-  "hook": "Texto gancho para los primeros 3 segundos en pantalla (ej. ¡NO ME CREO LO QUE ACABA DE ENTRAR!)",
-  "category": "Picks Verdes",
-  "viral_score": 92,
-  "summary": "Resumen específico de 1 frase de lo que pasó en el directo",
+  "title": "Título viral de alto impacto con emojis y mayúsculas adaptado al tema (máx 60 caracteres)",
+  "hook": "Gancho provocador para los primeros 3 seg (diseñado para obligar a comentar/debatir)",
+  "category": "{chosen_cat}",
+  "viral_score": {92 + (index % 5)},
+  "viral_trigger": "{chosen_trigger}",
+  "summary": "Resumen específico de 1 frase del momento según el tema asignado",
   "recommended_clipper": "Clipper {(index % 5) + 1}",
   "football_context": {{
     "is_football": true,
     "match": "{match_guess}",
-    "match_minute": "Minuto {int(start_ts.split(':')[0]) + 15}' aprox",
-    "play_event": "Gol agónico / Jugada decisiva del partido",
-    "search_query": "{match_guess} gol mejores jugadas"
+    "match_minute": "Momento {start_ts}",
+    "play_event": "{chosen_desc}",
+    "search_query": "{match_guess} resumen mejores jugadas"
   }}
 }}
-Categorías posibles: Picks Verdes | VAR & Polémica | Rages & Enfados | Casino & Slots | Just Chatting & Humor.
-    """
+"""
 
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
-            "temperature": 0.5,
+            "temperature": 0.6,
             "responseMimeType": "application/json"
         }
     }
@@ -643,7 +656,7 @@ def process_kick_vod(vod_url):
             "football_context": analysis.get("football_context")
         }
 
-    with ThreadPoolExecutor(max_workers=min(5, len(moments_sec))) as executor:
+    with ThreadPoolExecutor(max_workers=min(3, len(moments_sec))) as executor:
         results = list(executor.map(analyze_single_moment, enumerate(moments_sec)))
 
     output = {
