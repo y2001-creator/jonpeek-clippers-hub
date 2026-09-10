@@ -62,6 +62,27 @@ def extract_kick_info(url_or_channel):
             "id": "direct_m3u8"
         }
 
+    # Caso 2: Es un CLIP de Kick (ej. kick.com/jonpeek?clip=... o /clips/...)
+    is_clip = ("clip=" in clean.lower()) or ("/clips/" in clean.lower()) or ("clip_" in clean.lower())
+    if is_clip:
+        try:
+            cmd = ["yt-dlp", "-j", "--skip-download", clean]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=12)
+            if result.returncode == 0 and result.stdout:
+                info = json.loads(result.stdout)
+                clip_dur = int(float(info.get("duration", 35) or 35))
+                return {
+                    "id": info.get("id"),
+                    "title": info.get("title") or "Clip de Kick",
+                    "channel": info.get("channel") or info.get("uploader") or "jonpeek",
+                    "source": info.get("url") or clean,
+                    "duration": clip_dur,
+                    "thumbnail": info.get("thumbnail"),
+                    "is_clip": True
+                }
+        except Exception:
+            pass
+
     channel_name = "jonpeek"
     video_uuid = None
 
@@ -130,7 +151,7 @@ def extract_kick_info(url_or_channel):
 
     return None
 
-def analyze_audio_spikes(m3u8_url, total_duration, num_samples=30):
+def analyze_audio_spikes(m3u8_url, total_duration, num_samples=12):
     """
     Muestrea niveles de volumen (RMS/picos) a lo largo del stream para detectar
     momentos de gritos, celebraciones de goles, aciertos de apuestas o euforia.
@@ -138,25 +159,21 @@ def analyze_audio_spikes(m3u8_url, total_duration, num_samples=30):
     if total_duration <= 0:
         total_duration = 7200 # 2 horas por defecto
 
-    # Limitar duración para evitar desbordamiento
     duration_to_scan = min(total_duration, 18000) # Máximo 5 horas
-    step = max(60, duration_to_scan // num_samples)
+    step = max(90, duration_to_scan // num_samples)
     
     candidates = []
-    
-    # Tomar muestras estratégicas
     sample_points = list(range(120, duration_to_scan - 60, step))
     
-    # Procesar una lista de tiempos
     for t in sample_points[:num_samples]:
         try:
-            # Medir volumen en una ventana de 10 segundos con ffmpeg volumedetect
+            # Medir volumen en una ventana rápida de 5 segundos
             cmd = [
                 "ffmpeg", "-y", "-ss", str(t), "-i", m3u8_url,
-                "-t", "10", "-vn", "-af", "volumedetect",
+                "-t", "5", "-vn", "-af", "volumedetect",
                 "-f", "null", "-"
             ]
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=12)
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
             out = res.stderr or ""
             
             max_vol = -99.0
@@ -196,13 +213,13 @@ def analyze_audio_spikes(m3u8_url, total_duration, num_samples=30):
         except Exception:
             continue
 
-    # Ordenar por intensidad
+    # Ordenar por intensidad y tomar los 4 más virales
     candidates.sort(key=lambda x: x["intensity"], reverse=True)
-    return candidates[:8] # Top 8 momentos
+    return candidates[:4] # Top 4 momentos más explosivos
 
-def extract_audio_clip(m3u8_url, start_sec, duration_sec=35):
+def extract_audio_clip(m3u8_url, start_sec, duration_sec=20):
     """
-    Descarga únicamente un fragmento de audio de 35 segundos en formato MP3 ligero.
+    Descarga únicamente un fragmento de audio de 20 segundos en formato MP3 ligero.
     """
     temp_dir = tempfile.gettempdir()
     output_path = os.path.join(temp_dir, f"kick_clip_{int(start_sec)}.mp3")
@@ -249,7 +266,14 @@ Determina qué ocurre en el audio y responde ÚNICAMENTE con un objeto JSON vál
   "category": "Una de estas 5 categorías exactas: Picks Verdes | VAR & Polémica | Rages & Enfados | Casino & Slots | Just Chatting & Humor",
   "viral_score": 85,
   "summary": "Resumen de 1 frase de lo que dijo o pasó en el momento",
-  "recommended_clipper": "Clipper sugerido según el tipo de clip (Clipper 1, Clipper 2, Clipper 3, Clipper 4 o Clipper 5)"
+  "recommended_clipper": "Clipper sugerido según el tipo de clip (Clipper 1, Clipper 2, Clipper 3, Clipper 4 o Clipper 5)",
+  "football_context": {{
+    "is_football": true,
+    "match": "Equipos o competición del partido (ej. Real Madrid vs Barcelona)",
+    "match_minute": "Minuto de juego que se menciona (ej. Minuto 75' o 2do Tiempo)",
+    "play_event": "Jugada o acción exacta (ej. Golazo de fuera del área, Penalti no cobrado)",
+    "search_query": "Consulta óptima para buscar el video de la jugada (ej. Gol Vinicius Real Madrid)"
+  }}
 }}
     """
 
@@ -313,7 +337,14 @@ Responde ÚNICAMENTE en formato JSON:
   "category": "Picks Verdes",
   "viral_score": 88,
   "summary": "Momento de euforia máxima y tensión en el stream",
-  "recommended_clipper": "Clipper 1"
+  "recommended_clipper": "Clipper 1",
+  "football_context": {{
+    "is_football": true,
+    "match": "Competición o partido inferido del título del directo",
+    "match_minute": "Minuto estimado de la jugada",
+    "play_event": "Jugada o gol narrado",
+    "search_query": "Consulta para buscar la jugada en YouTube/X"
+  }}
 }}
 Categorías posibles: Picks Verdes | VAR & Polémica | Rages & Enfados | Casino & Slots | Just Chatting & Humor.
     """
@@ -341,21 +372,41 @@ Categorías posibles: Picks Verdes | VAR & Polémica | Rages & Enfados | Casino 
                     text += p["text"]
             clean_text = re.sub(r'```json\s*', '', text)
             clean_text = re.sub(r'```', '', clean_text).strip()
-            # Buscar el primer bloque { ... }
-            match = re.search(r'(\{[\s\S]*\})', clean_text)
+            parsed = None
             if match:
-                return json.loads(match.group(1))
-            return json.loads(clean_text)
+                parsed = json.loads(match.group(1))
+            else:
+                parsed = json.loads(clean_text)
+
+            if parsed and isinstance(parsed, dict):
+                if not parsed.get("football_context"):
+                    match_guess = video_title if any(w in video_title.upper() for w in ['FUTBOL', 'CHAMPIONS', 'LALIGA', 'PREMIER', 'MADRID', 'BARCA', 'APUESTAS']) else "Fútbol en Directo"
+                    parsed["football_context"] = {
+                        "is_football": True,
+                        "match": match_guess,
+                        "match_minute": f"Momento {start_ts}",
+                        "play_event": parsed.get("summary") or "Jugada destacada",
+                        "search_query": f"{match_guess} gol jugada"
+                    }
+                return parsed
     except Exception as err:
         pass
 
+    match_guess = video_title if any(w in video_title.upper() for w in ['FUTBOL', 'CHAMPIONS', 'LALIGA', 'PREMIER', 'MADRID', 'BARCA', 'APUESTAS']) else "Fútbol en Directo"
     return {
         "title": f"¡MOMENTO BRUTAL EN VIVO! 🔥 ({start_ts})",
         "hook": "Mira lo que pasó aquí...",
         "category": "Picks Verdes" if index % 2 == 0 else "VAR & Polémica",
         "viral_score": 85 - (index * 4),
         "summary": f"Pico de intensidad detectado en el minuto {start_ts}",
-        "recommended_clipper": f"Clipper {(index % 5) + 1}"
+        "recommended_clipper": f"Clipper {(index % 5) + 1}",
+        "football_context": {
+            "is_football": True,
+            "match": match_guess,
+            "match_minute": f"Momento {start_ts}",
+            "play_event": "Jugada destacada del directo",
+            "search_query": f"{match_guess} gol jugada"
+        }
     }
 
 def process_kick_vod(vod_url):
@@ -384,7 +435,42 @@ def process_kick_vod(vod_url):
     print(f"[*] Título detectado: {title}")
     print(f"[*] Duración: {format_timestamp(duration)}")
 
-    # 2. Detección de picos acústicos con FFmpeg
+    # Caso especial: Si es un CLIP corto (ej. 30 a 60 segundos), no inventar momentos de 2 horas
+    if vod_info.get("is_clip") or duration <= 120:
+        print(f"[*] Detectado como CLIP ya cortado ({duration}s). Analizando clip completo con Gemini...")
+        analysis = generate_fallback_gemini_analysis(title, "00:00", format_timestamp(duration), 0, channel)
+        return {
+            "success": True,
+            "vod": {
+                "title": title,
+                "channel": channel,
+                "duration": format_timestamp(duration),
+                "duration_seconds": duration,
+                "url": vod_url,
+                "source": source,
+                "is_clip": True
+            },
+            "total_clips_detected": 1,
+            "clips": [{
+                "index": 1,
+                "start_time": "00:00",
+                "end_time": format_timestamp(duration),
+                "start_seconds": 0,
+                "end_seconds": duration,
+                "duration_str": f"{duration}s",
+                "title": analysis.get("title", title),
+                "hook": analysis.get("hook", "¡Mira lo que ocurrió en este clip!"),
+                "category": analysis.get("category", "Picks Verdes"),
+                "viral_score": int(analysis.get("viral_score", 95)),
+                "summary": analysis.get("summary", "Clip de jugada o momento destacado"),
+                "recommended_clipper": analysis.get("recommended_clipper", "Clipper 1"),
+                "kick_url": vod_url,
+                "source": source,
+                "football_context": analysis.get("football_context")
+            }]
+        }
+
+    # 2. Detección de picos acústicos con FFmpeg para VODs largos (horas)
     spikes = []
     if source and ".m3u8" in source:
         print("[*] Muestreando intensidades y decibelios en el stream HLS...")
@@ -446,7 +532,8 @@ def process_kick_vod(vod_url):
             "summary": analysis.get("summary", ""),
             "recommended_clipper": analysis.get("recommended_clipper", f"Clipper {(i % 5) + 1}"),
             "kick_url": kick_jump_url,
-            "source": source
+            "source": source,
+            "football_context": analysis.get("football_context")
         })
 
     output = {

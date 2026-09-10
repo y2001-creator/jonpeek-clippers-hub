@@ -858,23 +858,37 @@ app.post('/api/cut-clip', (req, res) => {
   const start = Math.max(0, parseInt(startSeconds) || 0);
   const duration = Math.min(180, parseInt(durationSeconds) || 45);
 
-  console.log(`✂️ Cortando clip con FFmpeg: desde ${start}s durante ${duration}s -> ${filename}`);
+  console.log(`✂️ Cortando clip con FFmpeg (Stream Copy rápido): desde ${start}s durante ${duration}s -> ${filename}`);
 
+  // Usamos -c copy para empaquetado instantáneo (1-3 seg sin consumir CPU de Render)
   const ffmpegArgs = [
     '-y',
+    '-reconnect', '1',
+    '-reconnect_streamed', '1',
+    '-reconnect_delay_max', '4',
     '-ss', String(start),
     '-i', source,
     '-t', String(duration),
-    '-c:v', 'libx264',
-    '-preset', 'ultrafast',
-    '-crf', '22',
-    '-c:a', 'aac',
-    '-b:a', '128k',
+    '-c', 'copy',
+    '-bsf:a', 'aac_adtstoasc',
     '-movflags', '+faststart',
     outputPath
   ];
 
   const ffmpeg = spawn('ffmpeg', ffmpegArgs);
+
+  // Timeout de seguridad de 25 segundos para evitar bloqueos
+  const safetyTimeout = setTimeout(() => {
+    try {
+      ffmpeg.kill('SIGKILL');
+    } catch (e) {}
+    if (!res.headersSent) {
+      console.warn(`⚠️ Corte excedió timeout de 25s en ${filename}`);
+      return res.status(504).json({
+        error: 'El servidor tardó más de 25s en cortar el video. Por favor intenta de nuevo.'
+      });
+    }
+  }, 25000);
 
   let errOutput = '';
   ffmpeg.stderr.on('data', (d) => {
@@ -882,8 +896,11 @@ app.post('/api/cut-clip', (req, res) => {
   });
 
   ffmpeg.on('close', (code) => {
-    if (code === 0 && fs.existsSync(outputPath)) {
-      console.log(`✅ Clip cortado exitosamente: ${filename} (${fs.statSync(outputPath).size} bytes)`);
+    clearTimeout(safetyTimeout);
+    if (res.headersSent) return;
+
+    if (code === 0 && fs.existsSync(outputPath) && fs.statSync(outputPath).size > 1000) {
+      console.log(`✅ Clip cortado instantáneamente: ${filename} (${fs.statSync(outputPath).size} bytes)`);
       return res.json({
         success: true,
         downloadUrl: `/downloads/${filename}`,
@@ -891,10 +908,47 @@ app.post('/api/cut-clip', (req, res) => {
       });
     }
 
-    console.error('❌ Error al cortar clip con FFmpeg:', errOutput.slice(-300));
-    return res.status(500).json({
-      error: 'No se pudo generar el corte del video',
-      details: errOutput.slice(-300)
+    // Si -c copy falla por temas de codecs HLS, intentar fallback rápido con transcodificación
+    console.warn('⚠️ Intentando fallback ligero para corte de video...');
+    const fallbackArgs = [
+      '-y',
+      '-ss', String(start),
+      '-i', source,
+      '-t', String(duration),
+      '-c:v', 'libx264',
+      '-preset', 'ultrafast',
+      '-crf', '26',
+      '-c:a', 'aac',
+      '-b:a', '96k',
+      '-movflags', '+faststart',
+      outputPath
+    ];
+
+    const fallbackFfmpeg = spawn('ffmpeg', fallbackArgs);
+    const fbTimeout = setTimeout(() => {
+      try { fallbackFfmpeg.kill('SIGKILL'); } catch (e) {}
+      if (!res.headersSent) {
+        return res.status(504).json({ error: 'Tiempo agotado procesando el video.' });
+      }
+    }, 25000);
+
+    fallbackFfmpeg.on('close', (fbCode) => {
+      clearTimeout(fbTimeout);
+      if (res.headersSent) return;
+
+      if (fbCode === 0 && fs.existsSync(outputPath) && fs.statSync(outputPath).size > 1000) {
+        return res.json({
+          success: true,
+          downloadUrl: `/downloads/${filename}`,
+          filename: filename
+        });
+      }
+
+      console.error('❌ Error final al cortar clip:', errOutput.slice(-300));
+      return res.status(500).json({
+        error: 'No se pudo generar el corte del video',
+        details: errOutput.slice(-300)
+      });
     });
   });
 });
