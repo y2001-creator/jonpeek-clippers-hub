@@ -260,28 +260,32 @@ def call_gemini_with_audio(audio_path, start_ts, end_ts, streamer_name="Jonpeek"
         audio_b64 = base64.b64encode(f.read()).decode("utf-8")
 
     prompt = f"""
-Eres un editor profesional de clips virales para TikTok, YouTube Shorts y Reels del streamer '{streamer_name}'.
+Eres el editor jefe y estratega de clips virales para TikTok, Shorts y Reels del streamer deportivo '{streamer_name}'.
+Tu misión es encontrar momentos con potencial de viralidad MASIVA: que generen guerra de comentarios, dividan opiniones, polaricen o muestren euforia/rage genuino.
 Escucha con máxima atención este fragmento de audio del directo (Marca de tiempo: {start_ts} a {end_ts}).
 
-Determina con precisión qué ocurre en el audio:
-- ¿Qué dice o grita el streamer? ¿De qué partido está hablando (equipos, tarjetas, goles, penaltis, faltas, apuestas, cuotas)?
-- Si habla de apuestas o cuotas (ej. tarjetas amarillas/rojas, córners, goles en un tiempo, combinadas), refléjalo en el título y gancho.
-- Si no es fútbol sino casino, slots o charla, indícalo claramente.
+CRITERIOS CLAVE DE VIRALIDAD QUE DEBES PRIORIZAR:
+1. 🔥 POLARIZACIÓN Y DEBATES PICANTES: Menciones a Messi, Cristiano Ronaldo, Vinicius, Mbappé, Haaland, Lamine Yamal, rivalidades (Madrid vs Barça), Balón de Oro o comparaciones sobre quién es el mejor o el más sobrevalorado.
+2. 🤬 CRÍTICAS DURAS, HATE Y RAGEBAIT: Jonpeek destruyendo a un jugador ("está acabado", "es un paquete", "no le mete un gol al arcoíris"), quejas feroces al DT o enfados explosivos ("este equipo me está arruinando", "son unos desgraciados").
+3. 🚨 POLÉMICA ARBITRAL Y "ROBOS": Indignación con el VAR, penaltis no cobrados, tarjetas injustas o acusaciones de atraco que enciendan la furia del chat.
+4. 🟢 PICKS VERDES Y TENSIÓN DE APUESTAS: Cuotas altas cobradas agónicamente (ej. menos de 5 tarjetas, gol al 90'+) o la tensión antes de un penal decisivo.
+5. 🪝 HOOK (GANCHO) PARA RETENCIÓN: Los primeros 3 segundos DEBEN iniciar con una pregunta o frase que obligue al espectador a quedarse y comentar en TikTok (ej. "¿Estás de acuerdo con Jon?", "¿Robo histórico o acierto?", "¿Messi o Cristiano en su prime?").
 
 Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta:
 {{
-  "title": "Título llamativo para TikTok con emojis y mayúsculas (máx 60 caracteres)",
-  "hook": "El gancho o texto de impacto para los primeros 3 segundos del video",
+  "title": "Título viral de alto impacto con emojis y mayúsculas (máx 60 caracteres)",
+  "hook": "Gancho provocador para los primeros 3 seg (diseñado para obligar a comentar/debatir)",
   "category": "Una de estas 5 categorías exactas: Picks Verdes | VAR & Polémica | Rages & Enfados | Casino & Slots | Just Chatting & Humor",
-  "viral_score": 94,
-  "summary": "Resumen detallado de lo que Jonpeek dice, grita o comenta en este audio",
+  "viral_score": 95,
+  "viral_trigger": "Debate Messi/CR7 | Crítica / Ragebait | Polémica Arbitral / VAR | Pick Verde Épico | Momento Euforia",
+  "summary": "Resumen detallado de lo que Jonpeek dice, grita, opina o debate en este audio",
   "recommended_clipper": "Clipper 1",
   "football_context": {{
     "is_football": true,
-    "match": "Equipos o competición del partido mencionado (ej. Liverpool vs Atlético de Madrid)",
-    "match_minute": "Minuto del partido o momento mencionado",
-    "play_event": "Jugada, evento o tipo de apuesta exacta comentada (ej. Gol agónico, Apuesta de menos de 5 tarjetas)",
-    "search_query": "Consulta óptima para buscar el video o resumen de la jugada en YouTube"
+    "match": "Equipos o debate futbolístico (ej. Liverpool vs Atlético o Debate Messi vs CR7)",
+    "match_minute": "Minuto del partido o momento del debate",
+    "play_event": "Jugada o tema caliente comentado (ej. Menos de 5 tarjetas, Crítica a delantero por fallar)",
+    "search_query": "Consulta óptima para buscar el video de la jugada o resumen en YouTube"
   }}
 }}
 """
@@ -400,13 +404,14 @@ Categorías posibles: Picks Verdes | VAR & Polémica | Rages & Enfados | Casino 
             except Exception:
                 continue
 
-    # Plantillas de alta fidelidad especializadas en Jonpeek según rol de Clipper
+    # Plantillas de alta fidelidad especializadas en Jonpeek según rol de Clipper y polarización
     specialized_templates = [
         {
             "title": f"¡CUOTA 3.85 COBRADA EN EL MINUTO 92'! 🤑⚽",
-            "hook": "¡NO ME CREO QUE ENTRÓ ESTE GOL AL FINAL!",
+            "hook": "¿Estás de acuerdo con cerrar la apuesta o la dejabas correr?",
             "category": "Picks Verdes",
             "viral_score": 96,
+            "viral_trigger": "Pick Verde Épico",
             "summary": "Jonpeek celebra eufórico el gol que asegura la combinada de cuota alta de Champions.",
             "recommended_clipper": "Clipper 1",
             "football_context": {
@@ -418,25 +423,59 @@ Categorías posibles: Picks Verdes | VAR & Polémica | Rages & Enfados | Casino 
             }
         },
         {
+            "title": "«MESSI O CRISTIANO EN SU PRIME»: EL DEBATE DEFINITIVO 🔥🐐",
+            "hook": "¿Messi o Cristiano? ¡Jonpeek suelta la verdad que nadie quiere admitir!",
+            "category": "Just Chatting & Humor",
+            "viral_score": 98,
+            "viral_trigger": "Debate Messi/CR7",
+            "summary": "Jonpeek abre el debate eterno entre Leo Messi y Cristiano Ronaldo con una opinión tajante que divide por completo el chat.",
+            "recommended_clipper": "Clipper 4",
+            "football_context": {
+                "is_football": True,
+                "match": "Debate Messi vs Cristiano Ronaldo",
+                "match_minute": "Debate en directo",
+                "play_event": "Comparación histórica y opinión sobre quién es el GOAT",
+                "search_query": "Messi vs Cristiano Ronaldo debate prime"
+            }
+        },
+        {
             "title": f"¡EL ÁRBITRO ANULA EL GOL EN EL VAR Y JON ENTRA EN RAGE! 🤬⚽",
-            "hook": "¡Miren el robo que acaban de pitar en la Champions!",
+            "hook": "¿Robo histórico o acierto milimétrico del VAR? ¡Miren esto!",
             "category": "VAR & Polémica",
-            "viral_score": 93,
-            "summary": "Revisión en el monitor del VAR por un fuera de juego milimétrico y enfado monumental de Jon.",
+            "viral_score": 95,
+            "viral_trigger": "Polémica Arbitral / VAR",
+            "summary": "Revisión en el monitor del VAR por una jugada muy polémica y enfado monumental de Jon con el árbitro.",
             "recommended_clipper": "Clipper 3",
             "football_context": {
                 "is_football": True,
                 "match": match_guess,
                 "match_minute": "Minuto 74'",
-                "play_event": "Revisión de fuera de juego polémico en el VAR",
+                "play_event": "Revisión de jugada polémica en el VAR",
                 "search_query": f"{match_guess} polemica VAR gol anulado"
             }
         },
         {
+            "title": "«ESTÁ SOBREVALORADO»: JONPEEK DESTROZA AL DELANTERO 😡📉",
+            "hook": "¿Tiene razón Jon o se le fue la mano criticándolo?",
+            "category": "Rages & Enfados",
+            "viral_score": 97,
+            "viral_trigger": "Crítica / Ragebait",
+            "summary": "Jonpeek critica con dureza el bajo nivel y la falta de gol de una estrella mundial, calificándolo de sobrevalorado.",
+            "recommended_clipper": "Clipper 3",
+            "football_context": {
+                "is_football": True,
+                "match": match_guess,
+                "match_minute": "Minuto 60'",
+                "play_event": "Crítica feroz tras fallar ocasión clara frente a la portería",
+                "search_query": f"{match_guess} ocasiones falladas resumen"
+            }
+        },
+        {
             "title": f"¡AVISÓ EL GOL 15 MINUTOS ANTES CON ESTE DATO! 🧠📊",
-            "hook": "El dato estadístico que predijo exactamente el partido...",
+            "hook": "¿Suerte o pura lectura táctica? Miren cómo predijo la jugada...",
             "category": "Picks Verdes",
             "viral_score": 89,
+            "viral_trigger": "Estadística Anti-Humo",
             "summary": "Explicación táctica en el descanso anticipando los tiros a puerta del segundo tiempo.",
             "recommended_clipper": "Clipper 2",
             "football_context": {
@@ -448,25 +487,11 @@ Categorías posibles: Picks Verdes | VAR & Polémica | Rages & Enfados | Casino 
             }
         },
         {
-            "title": f"¡PENALTI AL 88' Y SE JUEGA EL BANKROLL ENTERO! 😱💸",
-            "hook": "¡No puede respirar con este penalti en vivo!",
-            "category": "VAR & Polémica",
-            "viral_score": 91,
-            "summary": "Tensión absoluta antes del disparo desde los once metros en los minutos finales.",
-            "recommended_clipper": "Clipper 4",
-            "football_context": {
-                "is_football": True,
-                "match": match_guess,
-                "match_minute": "Minuto 88'",
-                "play_event": "Penalti decisivo pitado al minuto 88",
-                "search_query": f"{match_guess} penal polemica"
-            }
-        },
-        {
             "title": f"¡MULTIPLICADOR 500X EN KICK TRAS EL PARTIDO! 🎰🔥",
             "hook": "¡Puso 10$ y miren la locura que pagó la máquina!",
             "category": "Casino & Slots",
             "viral_score": 87,
+            "viral_trigger": "Multiplicador Slots",
             "summary": "Jonpeek salta a las slots de Kick tras el partido y revienta la máquina con un multiplicador masivo.",
             "recommended_clipper": "Clipper 5",
             "football_context": None
@@ -610,6 +635,7 @@ def process_kick_vod(vod_url):
             "hook": analysis.get("hook", "¡No vas a creer esto!"),
             "category": cat,
             "viral_score": int(analysis.get("viral_score", 90)),
+            "viral_trigger": analysis.get("viral_trigger") or "Debate / Momento Viral",
             "summary": analysis.get("summary", ""),
             "recommended_clipper": clipper,
             "kick_url": kick_jump_url,

@@ -1540,6 +1540,11 @@ function renderViralVodResults(record) {
             <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${catClass}">
               ${clip.category}
             </span>
+            ${clip.viral_trigger ? `
+            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20 flex items-center gap-1">
+              ⚡ ${clip.viral_trigger}
+            </span>
+            ` : ''}
             <span class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center gap-1">
               🔥 ${clip.viral_score}/100
             </span>
