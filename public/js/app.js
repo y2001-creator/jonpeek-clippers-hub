@@ -1515,19 +1515,49 @@ function renderViralVodResults(record) {
 
   // Generar tarjetas de clips
   grid.innerHTML = clips.map((clip, i) => {
+    // 1. Limpieza y formato viral garantizado del título
+    let rawTitle = (clip.title || `Clip #${i + 1}`).trim();
+    rawTitle = rawTitle
+      .replace(/^jonpeek\s*analiza\s*/i, '')
+      .replace(/^jonpeek\s*comenta\s*/i, '')
+      .replace(/^jonpeek\s*reflexiona\s*sobre\s*/i, '')
+      .replace(/^jonpeek\s*reacciona\s*a\s*/i, '')
+      .replace(/^jonpeek\s*:\s*/i, '')
+      .replace(/^jonpeek\s*-\s*/i, '')
+      .trim();
+    if (!rawTitle.startsWith('¡') && !rawTitle.startsWith('«') && !rawTitle.startsWith('"') && !rawTitle.startsWith('¿')) {
+      rawTitle = rawTitle.length <= 45 ? `¡${rawTitle.toUpperCase()}! 🔥` : `«${rawTitle}» 🔥`;
+    }
+    if (!/[🔥⚽😱🚨💥🤑😡🟢⏱️🐐🏆]/.test(rawTitle)) {
+      rawTitle += ' ⚽🔥';
+    }
+
+    // 2. Corrección y balanceo dinámico de Clipper y Categoría
+    let displayCat = clip.category || 'Picks Verdes';
+    let displayClipper = clip.recommended_clipper || 'Clipper 1';
+    
+    if (clip.football_context && clip.football_context.is_football) {
+      if (displayCat.includes('Chatting') || displayCat.includes('Humor')) {
+        displayCat = (i % 2 === 1) ? 'VAR & Polémica' : 'Picks Verdes';
+      }
+      if (displayClipper === 'Clipper 4') {
+        displayClipper = (i % 2 === 1) ? 'Clipper 2' : 'Clipper 1';
+      }
+    }
+
     // Colores según categoría
     let catClass = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
-    if (clip.category.includes('Polémica') || clip.category.includes('VAR')) {
+    if (displayCat.includes('Polémica') || displayCat.includes('VAR')) {
       catClass = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
-    } else if (clip.category.includes('Rage') || clip.category.includes('Enfado')) {
+    } else if (displayCat.includes('Rage') || displayCat.includes('Enfado')) {
       catClass = 'bg-rose-500/20 text-rose-300 border-rose-500/30';
-    } else if (clip.category.includes('Casino') || clip.category.includes('Slots')) {
+    } else if (displayCat.includes('Casino') || displayCat.includes('Slots')) {
       catClass = 'bg-purple-500/20 text-purple-300 border-purple-500/30';
-    } else if (clip.category.includes('Chatting') || clip.category.includes('Humor')) {
+    } else if (displayCat.includes('Chatting') || displayCat.includes('Humor')) {
       catClass = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
     }
 
-    const encodedClip = encodeURIComponent(JSON.stringify(clip));
+    const encodedClip = encodeURIComponent(JSON.stringify({ ...clip, title: rawTitle, category: displayCat, recommended_clipper: displayClipper }));
 
     return `
       <div class="glass-card rounded-2xl p-5 border border-white/10 hover:border-brand-kick/40 transition-all flex flex-col justify-between space-y-4 bg-slate-900/60">
@@ -1538,14 +1568,19 @@ function renderViralVodResults(record) {
               #${clip.index || (i + 1)}
             </span>
             <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${catClass}">
-              ${clip.category}
+              ${displayCat}
             </span>
+            ${clip.viral_trigger ? `
+            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20 flex items-center gap-1">
+              ⚡ ${clip.viral_trigger}
+            </span>
+            ` : ''}
             <span class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center gap-1">
               🔥 ${clip.viral_score}/100
             </span>
           </div>
           <span class="text-xs font-bold text-slate-400 bg-slate-800 px-2.5 py-1 rounded-lg">
-            👤 ${clip.recommended_clipper || 'Clipper Asignado'}
+            👤 ${displayClipper}
           </span>
         </div>
 
@@ -1567,12 +1602,12 @@ function renderViralVodResults(record) {
         <div class="space-y-1">
           <div class="flex items-center justify-between text-[11px] text-slate-400">
             <span>Título Sugerido (TikTok / Shorts):</span>
-            <button onclick="copyViralText('${(clip.title || '').replace(/'/g, "\\'")}', this)" class="text-brand-kick hover:underline font-semibold text-[11px]">
+            <button onclick="copyViralText('${rawTitle.replace(/'/g, "\\'")}', this)" class="text-brand-kick hover:underline font-semibold text-[11px]">
               Copiar Título
             </button>
           </div>
           <p class="text-sm font-bold text-white bg-slate-950/50 p-2.5 rounded-xl border border-white/5">
-            ${clip.title}
+            ${rawTitle}
           </p>
         </div>
 
@@ -1590,6 +1625,31 @@ function renderViralVodResults(record) {
         <p class="text-xs text-slate-300">
           <strong>Contexto:</strong> ${clip.summary || 'Momento de euforia máxima detectado en el directo.'}
         </p>
+
+        <!-- Football Play Context & Resources (Para Pantalla Dividida) -->
+        ${clip.football_context ? `
+          <div class="p-3 rounded-xl bg-slate-950/70 border border-emerald-500/30 space-y-2">
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="font-bold text-emerald-400 flex items-center gap-1.5">
+                ⚽ Ficha de Jugada: ${clip.football_context.match || 'Partido en Vivo'}
+              </span>
+              <span class="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300 font-mono text-[10px] font-bold border border-emerald-500/20">
+                ${clip.football_context.match_minute || 'En juego'}
+              </span>
+            </div>
+            <p class="text-xs text-white font-medium">
+              🎯 <strong>Acción:</strong> ${clip.football_context.play_event || 'Jugada del partido'}
+            </p>
+            <div class="pt-1.5 flex items-center gap-2 border-t border-white/5">
+              <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(clip.football_context.search_query || clip.title)}&sp=CAI%253D" target="_blank" class="flex-1 py-1.5 px-2.5 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 text-[11px] font-bold flex items-center justify-center gap-1 transition-all" title="Buscar video reciente de la jugada en YouTube">
+                <i data-lucide="search" class="size-3"></i> 🔎 Buscar en YouTube
+              </a>
+              <a href="https://x.com/search?q=${encodeURIComponent(clip.football_context.search_query || clip.title)}&f=live" target="_blank" class="flex-1 py-1.5 px-2.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 text-[11px] font-bold flex items-center justify-center gap-1 transition-all" title="Buscar clips del gol en vivo en Twitter/X">
+                <i data-lucide="share-2" class="size-3"></i> 🐦 Clips en X
+              </a>
+            </div>
+          </div>
+        ` : ''}
 
         <!-- Actions -->
         <div class="space-y-2 pt-2 border-t border-white/5">
