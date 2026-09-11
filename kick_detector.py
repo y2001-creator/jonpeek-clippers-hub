@@ -245,7 +245,41 @@ def extract_audio_clip(m3u8_url, start_sec, duration_sec=16):
             return output_path
     except Exception:
         pass
-    return None
+def format_viral_title(raw_title):
+    """
+    Garantiza que ningún título empiece con frases aburridas tipo documental
+    ('Jonpeek analiza...', 'Jonpeek:') y fuerza formato de alto impacto viral con emojis.
+    """
+    if not raw_title:
+        return "¡MOMENTO VIRAL EN VIVO! 🔥⚽"
+    title = raw_title.strip()
+    bad_prefixes = [
+        r"^jonpeek\s*analiza\s*",
+        r"^jonpeek\s*comenta\s*",
+        r"^jonpeek\s*reflexiona\s*sobre\s*",
+        r"^jonpeek\s*reacciona\s*a\s*",
+        r"^jonpeek\s*:\s*",
+        r"^jonpeek\s*-\s*",
+        r"^análisis\s*de\s*jonpeek\s*sobre\s*",
+        r"^analisis\s*de\s*jonpeek\s*sobre\s*",
+        r"^análisis\s*de\s*jonpeek\s*:\s*",
+        r"^analisis\s*de\s*jonpeek\s*:\s*"
+    ]
+    for p in bad_prefixes:
+        title = re.sub(p, "", title, flags=re.IGNORECASE).strip()
+
+    # Si no tiene exclamación o comillas de gancho, darle formato viral
+    if not (title.startswith("¡") or title.startswith("«") or title.startswith('"') or title.startswith("¿")):
+        if len(title) <= 45:
+            title = f"¡{title.upper()}! 🔥"
+        else:
+            title = f"«{title}» 🔥"
+
+    # Asegurar que tenga al menos un emoji de alto impacto
+    if not any(char in title for char in ["🔥", "⚽", "😱", "🚨", "💥", "🤑", "😡", "🟢", "⏱️", "🐐", "🏆"]):
+        title += " ⚽🔥"
+
+    return title.strip()[:70]
 
 def call_gemini_with_audio(audio_path, start_ts, end_ts, streamer_name="Jonpeek"):
     """
@@ -261,30 +295,33 @@ def call_gemini_with_audio(audio_path, start_ts, end_ts, streamer_name="Jonpeek"
         audio_b64 = base64.b64encode(f.read()).decode("utf-8")
 
     prompt = f"""
-Eres el editor jefe de clips virales para el streamer '{streamer_name}'.
-Escucha con máxima atención este fragmento de audio del directo (Marca de tiempo: {start_ts} a {end_ts}).
+Eres un editor profesional de clips virales de TikTok, YouTube Shorts y Reels para el streamer de fútbol '{streamer_name}'.
+Tu objetivo es titular como un EDITOR TOP: títulos con GANCHO, EMOJIS, RETENCIÓN y SALSEO FUTBOLERO.
+⛔ REGLA OBLIGATORIA: NUNCA comiences los títulos con "Jonpeek analiza...", "Jonpeek comenta...", "Jonpeek:" ni frases aburridas tipo documental. Usa mayúsculas, comillas o exclamaciones con gancho de alto impacto.
 
-⚠️ REGLA DE ORO DE FIDELIDAD (ANTI-ALUCINACIÓN ESTRICTA):
-1. SEPARA VOCES: Diferencia la voz de Jonpeek de los comentaristas de la TV/fútbol de fondo. El clip DEBE ser sobre lo que Jonpeek dice, opina o hace, NO sobre lo que dice el narrador de la tele.
-2. PROHIBIDO INVENTAR DRAMA: NUNCA inventes que hay "robo arbitral", "atraco", "rage" o "enfado" si Jonpeek NO está explícitamente enfadado ni quejándose en el audio.
-3. VERACIDAD TOTAL: Si Jonpeek está tranquilo analizando que gana el Arsenal/Liverpool, comentando una tarjeta o revisando una apuesta, el título y el hook DEBEN ser llamativos pero 100% verídicos con lo que él dice.
-4. Si Jonpeek realmente se enfada, debate a Messi/CR7 o celebra una cuota, resáltalo fielmente.
+Escucha con atención este fragmento de audio del directo (Marca de tiempo: {start_ts} a {end_ts}).
 
-Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta:
+DIRECTRICES:
+1. TÍTULOS EXPLOSIVOS: Redacta títulos provocadores que den ganas de hacer clic (ej. «EL MADRID ME DA MIEDO HOY» 😱🔥, ¡GOLAZO AL MINUTO 16 QUE NADIE ESPERABA! ⚽⚡, ¡FINAL DE INFARTO EN EL DESCUENTO! ⏱️🚨, ¡VERDE AGÓNICO! CUOTA DE TARJETAS COBRADA 🤑🟢).
+2. HOOK (PRIMEROS 3 SEG): Pregunta o frase directa para poner en pantalla que obligue al espectador a comentar en TikTok.
+3. VERACIDAD: Sé fiel a lo que Jonpeek dice en su micrófono (si habla de tarjetas, dilo; si habla del Real Madrid, del Arsenal o del descuento, dilo).
+4. CATEGORÍAS DE FÚTBOL: Si Jonpeek está reaccionando a un partido de fútbol, goles o apuestas, clasifícalo en "Picks Verdes", "VAR & Polémica" o "Rages & Enfados". Reserva "Just Chatting & Humor" solo para charlas sin fútbol.
+
+Responde ÚNICAMENTE con un objeto JSON válido:
 {{
-  "title": "Título llamativo y 100% FIEL a lo que Jonpeek dice (máx 60 caracteres)",
-  "hook": "Gancho de texto para los primeros 3 seg (real y basado en lo que ocurre)",
-  "category": "Una de estas 5 categorías exactas: Picks Verdes | VAR & Polémica | Rages & Enfados | Casino & Slots | Just Chatting & Humor",
+  "title": "Título viral de alto impacto con emojis (máx 60 caracteres, PROHIBIDO empezar con 'Jonpeek')",
+  "hook": "Gancho de texto provocador para los primeros 3 seg",
+  "category": "Picks Verdes | VAR & Polémica | Rages & Enfados | Casino & Slots | Just Chatting & Humor",
   "viral_score": 92,
-  "viral_trigger": "Pick Verde Épico | Debate Futbolero | Análisis Táctico | Crítica Real | Momento Euforia",
-  "summary": "Resumen verídico y exacto de lo que Jonpeek dice o hace en este audio",
+  "viral_trigger": "Pick Verde Épico | Debate Futbolero | Golazo Inesperado | Tensión Final | Rage / Enfado",
+  "summary": "Resumen claro de lo que Jonpeek comenta o la jugada que ocurre",
   "recommended_clipper": "Clipper 1",
   "football_context": {{
     "is_football": true,
-    "match": "Partidos o temas mencionados por Jonpeek (ej. Arsenal y Liverpool)",
-    "match_minute": "Minuto mencionado o 'En juego'",
-    "play_event": "Qué comenta realmente Jonpeek (ej. Análisis de tarjetas y goles en vivo)",
-    "search_query": "Consulta óptima para buscar el video en YouTube"
+    "match": "Equipos o partido mencionado (ej. Real Madrid, Liverpool vs Atlético o Arsenal)",
+    "match_minute": "Minuto del partido o momento",
+    "play_event": "Jugada o tema caliente comentado (ej. Menos de 5 tarjetas, Gol temprano, Descuento)",
+    "search_query": "Consulta para buscar la jugada en YouTube"
   }}
 }}
 """
@@ -624,16 +661,19 @@ def process_kick_vod(vod_url):
         kick_jump_url = f"https://kick.com/{channel}?video={vod_info.get('id', '')}&t={int(start_sec)}" if vod_info.get('id') else f"https://kick.com/{channel}"
 
         cat = analysis.get("category", "Picks Verdes")
-        if "Polémica" in cat or "VAR" in cat or "Rage" in cat or "Enfado" in cat:
+        trigger = analysis.get("viral_trigger", "")
+        if "rage" in cat.lower() or "enfado" in cat.lower() or "crítica" in trigger.lower():
             clipper = "Clipper 3"
-        elif "Casino" in cat or "Slots" in cat:
+        elif "polémica" in cat.lower() or "var" in cat.lower() or "tensión" in trigger.lower():
+            clipper = "Clipper 3"
+        elif "casino" in cat.lower() or "slots" in cat.lower():
             clipper = "Clipper 5"
-        elif "Chatting" in cat or "Humor" in cat:
+        elif "debate" in trigger.lower():
             clipper = "Clipper 4"
-        elif i % 2 == 0:
-            clipper = "Clipper 1"
-        else:
+        elif i % 2 == 1:
             clipper = "Clipper 2"
+        else:
+            clipper = "Clipper 1"
 
         return {
             "index": i + 1,
@@ -642,7 +682,7 @@ def process_kick_vod(vod_url):
             "start_seconds": start_sec,
             "end_seconds": end_sec,
             "duration_str": f"{end_sec - start_sec}s",
-            "title": analysis.get("title", f"Clip #{i+1} en {start_ts}"),
+            "title": format_viral_title(analysis.get("title", f"Clip #{i+1} en {start_ts}")),
             "hook": analysis.get("hook", "¡No vas a creer esto!"),
             "category": cat,
             "viral_score": int(analysis.get("viral_score", 90)),
