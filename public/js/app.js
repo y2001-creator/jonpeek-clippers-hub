@@ -417,6 +417,16 @@ function switchTab(tabId) {
     activeContent.classList.remove('hidden');
   }
 
+  // Ocultar botón global de "Subir Clip" en la pestaña de clipear directos para evitar confusión
+  const navbarSubirBtn = document.getElementById('btn-navbar-subir-clip');
+  if (navbarSubirBtn) {
+    if (tabId === 'viral') {
+      navbarSubirBtn.classList.add('hidden');
+    } else {
+      navbarSubirBtn.classList.remove('hidden');
+    }
+  }
+
   if (tabId === 'payouts') {
     renderPayoutsGrid();
   }
